@@ -1,0 +1,64 @@
+@page "/"
+@layout AuthLayout
+@attribute [AllowAnonymous]
+@inject ICurrentUser CurrentUser
+@inject NavigationManager Nav
+
+<PageTitle>Sign In · PRAL PER</PageTitle>
+
+<div class="auth-wrap">
+    <div class="auth-brand">
+        <div class="auth-logo">⚙️</div>
+        <h1>PRAL</h1>
+        <p>Performance Evaluation Report System</p>
+    </div>
+
+    <form method="post" action="/account/login" class="auth-card">
+        <AntiforgeryToken />
+        <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+
+        <h2>Sign In</h2>
+
+        @if (!string.IsNullOrEmpty(Error))
+        {
+            <div class="auth-error">@Error</div>
+        }
+
+        <label class="auth-label" for="email">Email Address / Employee ID</label>
+        <input id="email" name="email" type="email" class="auth-input"
+               placeholder="admin@pral.com.pk" autocomplete="username" required />
+
+        <label class="auth-label" for="password">Password</label>
+        <input id="password" name="password" type="password" class="auth-input"
+               placeholder="••••••••" autocomplete="current-password" required />
+
+        <div class="auth-row">
+            <label class="auth-check"><input type="checkbox" name="rememberMe" value="true" /> Remember me</label>
+            <a class="auth-link" href="/forgot-password">Forgot Password?</a>
+        </div>
+
+        <button type="submit" class="auth-btn">Sign In</button>
+    </form>
+
+    <div class="auth-footer">🔒 Secure Enterprise Access</div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? Error { get; set; }
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Already signed in -> go to the appropriate dashboard.
+        if (CurrentUser.IsAuthenticated)
+        {
+            var role = CurrentUser.ActiveRole
+                ?? (CurrentUser.IsInRole(RoleNames.Admin) ? RoleNames.Admin
+                    : CurrentUser.IsInRole(RoleNames.Manager) ? RoleNames.Manager
+                    : CurrentUser.IsInRole(RoleNames.Employee) ? RoleNames.Employee : null);
+
+            if (role is not null)
+                Nav.NavigateTo(RoleRoutes.DashboardFor(role), forceLoad: true);
+        }
+    }
+}

@@ -1,0 +1,11 @@
+@* Read-only label/value pair. *@
+
+<MudStack Spacing="0">
+    <MudText Typo="Typo.caption" Color="Color.Secondary">@Label</MudText>
+    <MudText Typo="Typo.body1" Style="font-weight:600">@(string.IsNullOrWhiteSpace(Value) ? "—" : Value)</MudText>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public string? Value { get; set; }
+}

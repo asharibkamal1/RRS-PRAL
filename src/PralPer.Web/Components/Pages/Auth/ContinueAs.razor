@@ -1,0 +1,52 @@
+@page "/continue"
+@layout AuthLayout
+@attribute [Authorize]
+@inject ICurrentUser CurrentUser
+
+<PageTitle>Continue as · PRAL PER</PageTitle>
+
+<div class="auth-wrap">
+    <div class="auth-brand">
+        <div class="auth-logo">⚙️</div>
+        <h1>Continue as</h1>
+        <p>Welcome back, @CurrentUser.DisplayName. Select your role to continue.</p>
+    </div>
+
+    <div class="role-grid">
+        @foreach (var role in CurrentUser.Roles)
+        {
+            <form method="post" action="/account/set-active-role" class="role-card">
+                <AntiforgeryToken />
+                <input type="hidden" name="role" value="@role" />
+                <div class="role-icon">@RoleIcon(role)</div>
+                <span class="role-badge">Available</span>
+                <h3>@role</h3>
+                <p>@RoleDescription(role)</p>
+                <button type="submit" class="role-continue">Continue ›</button>
+            </form>
+        }
+    </div>
+
+    <div class="auth-footer">
+        <form method="post" action="/account/logout">
+            <AntiforgeryToken />
+            <button type="submit" class="auth-textlink">← Back to Login</button>
+        </form>
+    </div>
+</div>
+
+@code {
+    private static string RoleIcon(string role) => role switch
+    {
+        RoleNames.Admin => "🛡️",
+        RoleNames.Manager => "👔",
+        _ => "👤"
+    };
+
+    private static string RoleDescription(string role) => role switch
+    {
+        RoleNames.Admin => "Attribute Administration & Designation Mapping",
+        RoleNames.Manager => "Review & approve PERs, assign raters",
+        _ => "Goals, self-evaluation & feedback"
+    };
+}

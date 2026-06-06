@@ -1,0 +1,41 @@
+## .NET / Visual Studio
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userprefs
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+artifacts/
+
+## Rider
+.idea/
+
+## VS Code
+.vscode/
+
+## Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+
+## NuGet
+*.nupkg
+packages/
+.nuget/
+
+## EF / local db
+*.mdf
+*.ldf
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Secrets / local config
+appsettings.*.local.json
+secrets.json

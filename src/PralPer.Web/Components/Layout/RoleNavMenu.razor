@@ -1,0 +1,49 @@
+@inject ICurrentUser CurrentUser
+
+@{
+    // The active role drives which module's navigation is shown (multi-role accounts).
+    var role = CurrentUser.ActiveRole
+        ?? (CurrentUser.IsInRole(RoleNames.Admin) ? RoleNames.Admin
+            : CurrentUser.IsInRole(RoleNames.Manager) ? RoleNames.Manager
+            : RoleNames.Employee);
+}
+
+<MudNavMenu Class="pa-2">
+    @switch (role)
+    {
+        case RoleNames.Admin:
+            <MudText Typo="Typo.overline" Class="px-3 pt-2">Admin</MudText>
+            <MudNavLink Href="/admin/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/admin/profile" Icon="@Icons.Material.Filled.Person">My Profile</MudNavLink>
+            <MudNavLink Href="/admin/evaluation-period" Icon="@Icons.Material.Filled.Schedule">Evaluation Period</MudNavLink>
+            <MudNavLink Href="/admin/rating-period" Icon="@Icons.Material.Filled.EventNote">Rating Period</MudNavLink>
+            <MudNavLink Href="/admin/goal-administration" Icon="@Icons.Material.Filled.TrackChanges">Goal Administration</MudNavLink>
+            <MudNavLink Href="/admin/attributes" Icon="@Icons.Material.Filled.Tune">Attribute Administration</MudNavLink>
+            <MudNavLink Href="/admin/attribute-designation" Icon="@Icons.Material.Filled.Map">Attribute Designation</MudNavLink>
+            <MudNavLink Href="/admin/assign-rators" Icon="@Icons.Material.Filled.People">Assign Raters</MudNavLink>
+            <MudNavLink Href="/admin/per-reports" Icon="@Icons.Material.Filled.Assessment">PER Reports</MudNavLink>
+            <MudNavLink Href="/admin/system-flow" Icon="@Icons.Material.Filled.AccountTree">System Flow</MudNavLink>
+            break;
+
+        case RoleNames.Manager:
+            <MudText Typo="Typo.overline" Class="px-3 pt-2">Manager</MudText>
+            <MudNavLink Href="/manager/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/manager/profile" Icon="@Icons.Material.Filled.Person">My Profile</MudNavLink>
+            <MudNavLink Href="/manager/assign-rators" Icon="@Icons.Material.Filled.People">Assign Raters</MudNavLink>
+            <MudNavLink Href="/manager/goals" Icon="@Icons.Material.Filled.TrackChanges">Goal Submission</MudNavLink>
+            <MudNavLink Href="/manager/competency" Icon="@Icons.Material.Filled.Star">360° Rating</MudNavLink>
+            <MudNavLink Href="/manager/per-reports" Icon="@Icons.Material.Filled.Assessment">PER Reports</MudNavLink>
+            <MudNavLink Href="/manager/system-flow" Icon="@Icons.Material.Filled.AccountTree">System Flow</MudNavLink>
+            break;
+
+        default:
+            <MudText Typo="Typo.overline" Class="px-3 pt-2">Employee</MudText>
+            <MudNavLink Href="/employee/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
+            <MudNavLink Href="/employee/profile" Icon="@Icons.Material.Filled.Person">My Profile</MudNavLink>
+            <MudNavLink Href="/employee/goals" Icon="@Icons.Material.Filled.TrackChanges">Goal Submission</MudNavLink>
+            <MudNavLink Href="/employee/competency" Icon="@Icons.Material.Filled.Star">Competency Rating</MudNavLink>
+            <MudNavLink Href="/employee/my-evaluations" Icon="@Icons.Material.Filled.FactCheck">My Evaluations</MudNavLink>
+            <MudNavLink Href="/employee/system-flow" Icon="@Icons.Material.Filled.AccountTree">System Flow</MudNavLink>
+            break;
+    }
+</MudNavMenu>

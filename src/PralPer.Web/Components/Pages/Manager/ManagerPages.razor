@@ -1,0 +1,17 @@
+@page "/manager/profile"
+@page "/manager/assign-rators"
+@page "/manager/goals"
+@page "/manager/competency"
+@page "/manager/per-reports"
+@page "/manager/system-flow"
+@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@inject NavigationManager Nav
+
+<PageTitle>@Title · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">@Title</MudText>
+<ComingSoon Title="@Title" Phase="Manager module — later phase" />
+
+@code {
+    private string Title => PageTitleHelper.FromUri(Nav.Uri);
+}

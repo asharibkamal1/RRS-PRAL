@@ -1,0 +1,35 @@
+@inject ICurrentUser CurrentUser
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%">
+    <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" />
+    <MudStack Spacing="0">
+        <MudText Typo="Typo.subtitle1" Style="font-weight:700;line-height:1">PRAL</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="line-height:1">Performance Evaluation System</MudText>
+    </MudStack>
+
+    <MudSpacer />
+
+    @if (CurrentUser.IsAuthenticated)
+    {
+        @if (!string.IsNullOrEmpty(CurrentUser.ActiveRole))
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+                Viewing as: @CurrentUser.ActiveRole
+            </MudChip>
+            <MudLink Href="/continue" Class="mx-2">Switch</MudLink>
+        }
+
+        <MudStack Spacing="0" Class="mr-2" AlignItems="AlignItems.End">
+            <MudText Typo="Typo.body2" Style="font-weight:600">@CurrentUser.DisplayName</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@CurrentUser.UserName</MudText>
+        </MudStack>
+
+        <form method="post" action="/account/logout">
+            <AntiforgeryToken />
+            <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text"
+                       StartIcon="@Icons.Material.Filled.Logout" Color="Color.Default">
+                Logout
+            </MudButton>
+        </form>
+    }
+</MudStack>

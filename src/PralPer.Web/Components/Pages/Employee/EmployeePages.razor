@@ -1,0 +1,17 @@
+@page "/employee/goals"
+@page "/employee/competency"
+@page "/employee/my-evaluations"
+@page "/employee/system-flow"
+@attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@inject NavigationManager Nav
+
+<PageTitle>@Title · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">@Title</MudText>
+<ComingSoon Title="@Title"
+            Subtitle="This Employee screen is implemented next, on the foundation just built (Goal Submission, Competency Rating, My Evaluations, System Flow)."
+            Phase="Employee phase — next" />
+
+@code {
+    private string Title => PageTitleHelper.FromUri(Nav.Uri);
+}

@@ -1,0 +1,17 @@
+@* Titled card container used across profile/report screens. *@
+
+<MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+        <MudIcon Icon="@Icon" Color="Color.Primary" />
+        <MudText Typo="Typo.subtitle1" Style="font-weight:700">@Title</MudText>
+    </MudStack>
+    <MudStack Spacing="2">
+        @ChildContent
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Info;
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

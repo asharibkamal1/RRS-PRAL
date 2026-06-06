@@ -1,0 +1,74 @@
+@page "/employee/profile"
+@attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@inject IProfileService ProfileService
+@inject ICurrentUser CurrentUser
+
+<PageTitle>My Profile · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Employee Profile</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-5">Auto-fetched HRMS data and complete employee information</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_employee is null)
+{
+    <MudAlert Severity="Severity.Warning">No employee record is linked to your account.</MudAlert>
+}
+else
+{
+    <MudPaper Class="pa-5 mb-4" Elevation="1">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
+            <MudAvatar Color="Color.Primary" Style="height:64px;width:64px">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+            </MudAvatar>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h5" Style="font-weight:700">@_employee.Name</MudText>
+                <MudText Typo="Typo.subtitle1" Color="Color.Primary">@(_employee.Designation?.Name)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@_employee.WorkEmail</MudText>
+            </MudStack>
+            <MudSpacer />
+            <MudChip T="string" Color="@(_employee.IsActive ? Color.Success : Color.Default)" Variant="Variant.Filled">
+                @(_employee.IsActive ? "Active" : "Inactive")
+            </MudChip>
+        </MudStack>
+    </MudPaper>
+
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <InfoCard Title="HR Information" Icon="@Icons.Material.Filled.Badge">
+                <Field Label="HR Code" Value="@_employee.HrCode" />
+                <Field Label="Accounts Code" Value="@_employee.AccountsCode" />
+                <Field Label="Pay Group" Value="@_employee.PayGroup" />
+                <Field Label="Employment Status" Value="@_employee.EmploymentStatus" />
+            </InfoCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <InfoCard Title="Department Details" Icon="@Icons.Material.Filled.Business">
+                <Field Label="Department" Value="@(_employee.Department?.Name)" />
+                <Field Label="Wing" Value="@_employee.Wing" />
+                <Field Label="Reporting Manager" Value="@_employee.RmName" />
+            </InfoCard>
+        </MudItem>
+        <MudItem xs="12" md="4">
+            <InfoCard Title="Evaluation Period" Icon="@Icons.Material.Filled.CalendarMonth">
+                <Field Label="Designation" Value="@(_employee.Designation?.Name)" />
+                <Field Label="Recruitment Date" Value="@_employee.RecruitmentDate?.ToString("dd MMM yyyy")" />
+                <Field Label="Last Promotion" Value="@_employee.LastPromotionDate?.ToString("dd MMM yyyy")" />
+            </InfoCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private Employee? _employee;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CurrentUser.EmployeeId is int id)
+            _employee = await ProfileService.GetByEmployeeIdAsync(id);
+        _loading = false;
+    }
+}
