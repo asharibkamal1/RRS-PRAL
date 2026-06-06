@@ -146,3 +146,28 @@ public class PerResultConfiguration : IEntityTypeConfiguration<PerResult>
         b.HasIndex(p => new { p.EvaluationPeriodId, p.EmployeeId }).IsUnique();
     }
 }
+
+public class EmployeeEvaluationSummaryConfiguration : IEntityTypeConfiguration<EmployeeEvaluationSummary>
+{
+    public void Configure(EntityTypeBuilder<EmployeeEvaluationSummary> b)
+    {
+        b.Property(s => s.GoalCompletionPercent).HasPrecision(5, 2);
+        b.Property(s => s.FinalPerScore).HasPrecision(5, 2);
+        b.Property(s => s.EvaluationStatus).HasMaxLength(50).IsRequired();
+        b.Property(s => s.ManagerStrengths).HasMaxLength(1000);
+        b.Property(s => s.ManagerDevelopmentAreas).HasMaxLength(1000);
+        b.Property(s => s.ManagerName).HasMaxLength(200);
+
+        b.HasOne(s => s.EvaluationPeriod)
+            .WithMany()
+            .HasForeignKey(s => s.EvaluationPeriodId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasOne(s => s.Employee)
+            .WithMany()
+            .HasForeignKey(s => s.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        b.HasIndex(s => new { s.EvaluationPeriodId, s.EmployeeId }).IsUnique();
+    }
+}

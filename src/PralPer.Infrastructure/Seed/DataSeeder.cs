@@ -170,6 +170,46 @@ public static class DataSeeder
             });
         }
         await db.SaveChangesAsync();
+
+        // ---- Dummy PRE-CALCULATED results (in production these come from DB stored procedures) ----
+        db.PerResults.Add(new PerResult
+        {
+            EvaluationPeriodId = period.Id,
+            EmployeeId = aamir.Id,
+            GoalScore = 8.0m,
+            PeerScore = 8.0m,
+            FinalScore = 8.28m,
+            GeneratedAtUtc = DateTimeOffset.UtcNow
+        });
+
+        var summaries = new (Employee emp, decimal goalPct, string status, decimal final, int pendingActions, int pendingEval, int submittedEval)[]
+        {
+            (emps[0], 85m,  "In Review", 82.8m, 2, 5, 12),
+            (emps[3], 60m,  "Pending",   0m,    3, 4, 8),
+            (emps[4], 100m, "Completed", 88.5m, 0, 0, 10),
+            (emps[6], 40m,  "Pending",   0m,    4, 6, 5),
+        };
+        foreach (var s in summaries)
+        {
+            db.EmployeeEvaluationSummaries.Add(new EmployeeEvaluationSummary
+            {
+                EvaluationPeriodId = period.Id,
+                EmployeeId = s.emp.Id,
+                GoalCompletionPercent = s.goalPct,
+                EvaluationStatus = s.status,
+                FinalPerScore = s.final,
+                PendingActions = s.pendingActions,
+                PendingEvaluations = s.pendingEval,
+                SubmittedEvaluations = s.submittedEval,
+                DaysUntilDeadline = 16,
+                EvaluationDeadline = new DateTime(2026, 5, 31),
+                ManagerStrengths = "Exceptional technical expertise and leadership in the React migration project. Strong mentorship skills.",
+                ManagerDevelopmentAreas = "Focus on improving cross-department communication and strategic planning for larger initiatives.",
+                ManagerName = mgr.Name,
+                FeedbackUpdatedOn = new DateTime(2026, 5, 13)
+            });
+        }
+        await db.SaveChangesAsync();
     }
 
     private static Employee New(string hr, string name, Department dept, Designation desig,

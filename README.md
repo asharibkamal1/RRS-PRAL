@@ -14,7 +14,7 @@ for the Database team's SPs.
 ```
 PralPer.sln
 ├── src/
-│   ├── PralPer.Domain          # Entities, enums, constants, pure scoring (no deps)
+│   ├── PralPer.Domain          # Entities, enums, constants (no deps). NO scoring — calc is DB-side.
 │   ├── PralPer.Application      # Abstractions (IRepository, IUnitOfWork, ICurrentUser,
 │   │                            #   IStoredProcedureExecutor), service interfaces, Result
 │   ├── PralPer.Infrastructure   # EF Core DbContext + configs, Identity, repositories,
@@ -22,8 +22,12 @@ PralPer.sln
 │   └── PralPer.Web             # Blazor (MudBlazor) UI — modular Admin/Manager/Employee
 │                                #   pages + layouts, auth controller, claims plumbing
 └── tests/
-    └── PralPer.UnitTests        # Scoring/validation unit tests (xUnit)
+    └── PralPer.UnitTests        # Domain/constant unit tests (xUnit)
 ```
+
+> **Calculation policy:** the app performs **no PER score calculation**. All scores/percentages are
+> computed in the **database** (stored procedures) and stored in tables; the app only **inserts raw
+> inputs** and **fetches results** to display. See `docs/Architecture-Decisions.md` (AD-1).
 
 **Dependency rule:** `Web → Infrastructure → Application → Domain`. Domain depends on nothing.
 The DB-team schema swap is isolated to Infrastructure.

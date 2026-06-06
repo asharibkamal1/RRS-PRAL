@@ -1,6 +1,8 @@
 @page "/employee/dashboard"
 @attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@using PralPer.Application.Dashboards
 @inject ICurrentUser CurrentUser
+@inject IDashboardService Dashboard
 
 <PageTitle>Employee Dashboard · PRAL PER</PageTitle>
 
@@ -9,14 +11,93 @@
     Good day, @CurrentUser.DisplayName! Here's your performance evaluation overview.
 </MudText>
 
-<MudGrid>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Goal Completion Progress" Value="85%" Icon="@Icons.Material.Filled.TrackChanges" Accent="#16A34A" /></MudItem>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Evaluation Status" Value="In Review" Icon="@Icons.Material.Filled.RateReview" Accent="#2563EB" /></MudItem>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Final PER Score" Value="82.8" Icon="@Icons.Material.Filled.Star" Accent="#7C3AED" /></MudItem>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Pending Actions" Value="2" Icon="@Icons.Material.Filled.NotificationsActive" Accent="#D97706" /></MudItem>
-</MudGrid>
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_dto is null)
+{
+    <MudAlert Severity="Severity.Warning">No active evaluation cycle or linked employee record.</MudAlert>
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Goal Completion Progress" Value="@($"{_dto.GoalCompletionPercent:0}%")" Icon="@Icons.Material.Filled.TrackChanges" Accent="#16A34A" /></MudItem>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Evaluation Status" Value="@_dto.EvaluationStatus" Icon="@Icons.Material.Filled.RateReview" Accent="#2563EB" /></MudItem>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Final PER Score" Value="@_dto.FinalPerScore.ToString("0.0")" Icon="@Icons.Material.Filled.Star" Accent="#7C3AED" /></MudItem>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Pending Actions" Value="@_dto.PendingActions.ToString()" Icon="@Icons.Material.Filled.NotificationsActive" Accent="#D97706" /></MudItem>
+    </MudGrid>
 
-<MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-6">
-    Live dashboard data (My Goals Progress, Manager Feedback, Peer Rating Overview, Pending/Completed
-    evaluations) is wired in the next Employee-phase step. The KPI cards above show the Figma layout.
-</MudAlert>
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudText Typo="Typo.h6" Class="mb-3">My Goals Progress</MudText>
+                @foreach (var g in _dto.Goals)
+                {
+                    <div class="mb-3">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">@g.Title <MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">Weight: @g.WeightPercent.ToString("0")%</MudText></MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Primary" Style="font-weight:600">@g.ProgressPercent.ToString("0")%</MudText>
+                        </MudStack>
+                        <MudProgressLinear Color="Color.Primary" Value="@((double)g.ProgressPercent)" Class="mt-1" Rounded="true" Size="Size.Medium" />
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudText Typo="Typo.h6" Class="mb-3">Manager Feedback</MudText>
+                <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" Class="mb-2" Icon="@Icons.Material.Filled.CheckCircle">
+                    <strong>Strengths</strong><br />@_dto.ManagerStrengths
+                </MudAlert>
+                <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.TrackChanges">
+                    <strong>Development Areas</strong><br />@_dto.ManagerDevelopmentAreas
+                </MudAlert>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Manager: @_dto.ManagerName</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudText Typo="Typo.h5" Class="mt-6 mb-3">Peer Rating Overview</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="4"><KpiCard Title="Pending Evaluations" Value="@_dto.PendingEvaluations.ToString()" Icon="@Icons.Material.Filled.HourglassBottom" Accent="#D97706" /></MudItem>
+        <MudItem xs="12" sm="4"><KpiCard Title="Submitted Evaluations" Value="@_dto.SubmittedEvaluations.ToString()" Icon="@Icons.Material.Filled.CheckCircle" Accent="#16A34A" /></MudItem>
+        <MudItem xs="12" sm="4"><KpiCard Title="Days Until Deadline" Value="@_dto.DaysUntilDeadline.ToString()" Icon="@Icons.Material.Filled.Event" Accent="#DC2626" /></MudItem>
+    </MudGrid>
+
+    @if (_dto.EvaluationDeadline is not null)
+    {
+        <MudPaper Class="pa-4 mt-3" Style="background:linear-gradient(90deg,#F97316,#EA580C);color:#fff;border-radius:12px">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" />
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.caption">Evaluation Deadline</MudText>
+                    <MudText Typo="Typo.h6">@_dto.EvaluationDeadline.Value.ToString("MMMM d, yyyy")</MudText>
+                    <MudText Typo="Typo.caption">Complete @_dto.PendingEvaluations pending evaluations before deadline</MudText>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    }
+
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" md="6">
+            <EvaluationListCard Title="Pending Evaluations" Items="_dto.PendingList" StatusColor="Color.Warning" />
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <EvaluationListCard Title="Completed Evaluations" Items="_dto.CompletedList" StatusColor="Color.Success" />
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private EmployeeDashboardDto? _dto;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CurrentUser.EmployeeId is int id)
+            _dto = await Dashboard.GetEmployeeDashboardAsync(id);
+        _loading = false;
+    }
+}

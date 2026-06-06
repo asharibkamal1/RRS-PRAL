@@ -1,6 +1,8 @@
 @page "/admin/dashboard"
 @attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Dashboards
 @inject ICurrentUser CurrentUser
+@inject IDashboardService Dashboard
 
 <PageTitle>Administrator Dashboard · PRAL PER</PageTitle>
 
@@ -9,14 +11,35 @@
     Good day, @CurrentUser.DisplayName. Here's your performance evaluation overview.
 </MudText>
 
-<MudGrid>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Total Employees" Value="20" Icon="@Icons.Material.Filled.Groups" Accent="#2563EB" /></MudItem>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Evaluations Pending" Value="1" Icon="@Icons.Material.Filled.HourglassBottom" Accent="#D97706" /></MudItem>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Completed Reviews" Value="2" Icon="@Icons.Material.Filled.CheckCircle" Accent="#16A34A" /></MudItem>
-    <MudItem xs="12" sm="6" md="3"><KpiCard Title="Active Cycle" Value="Q1 2026" Icon="@Icons.Material.Filled.Autorenew" Accent="#7C3AED" /></MudItem>
-</MudGrid>
+@if (_dto is null)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Total Employees" Value="@_dto.TotalEmployees.ToString()" Icon="@Icons.Material.Filled.Groups" Accent="#2563EB" /></MudItem>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Completed" Value="@_dto.Completed.ToString()" Icon="@Icons.Material.Filled.CheckCircle" Accent="#16A34A" /></MudItem>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Pending" Value="@_dto.Pending.ToString()" Icon="@Icons.Material.Filled.HourglassBottom" Accent="#D97706" /></MudItem>
+        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Not Started" Value="@_dto.NotStarted.ToString()" Icon="@Icons.Material.Filled.RadioButtonUnchecked" Accent="#DC2626" /></MudItem>
+    </MudGrid>
 
-<MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-6">
-    Admin module screens (Evaluation/Rating periods, Attribute &amp; Designation administration,
-    Assign Raters, PER reports) are scheduled after the Employee phase, on this same modular foundation.
-</MudAlert>
+    <MudPaper Class="pa-4 mt-4" Elevation="1">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Autorenew" Color="Color.Tertiary" />
+            <MudText Typo="Typo.subtitle1">Active Cycle: <strong>@_dto.ActiveCycleName</strong></MudText>
+        </MudStack>
+    </MudPaper>
+
+    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+        All figures are fetched from the database (pre-calculated). Admin module screens
+        (periods, attributes, designation mapping, assign raters, reports) follow in a later phase.
+    </MudAlert>
+}
+
+@code {
+    private AdminDashboardDto? _dto;
+
+    protected override async Task OnInitializedAsync()
+        => _dto = await Dashboard.GetAdminDashboardAsync();
+}

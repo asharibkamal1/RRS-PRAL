@@ -1,0 +1,28 @@
+@using PralPer.Application.Dashboards
+
+<MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+    <MudText Typo="Typo.h6" Class="mb-3">@Title</MudText>
+    @if (Items.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Nothing here yet.</MudText>
+    }
+    else
+    {
+        @foreach (var item in Items)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="py-2" Style="border-bottom:1px solid #F1F5F9">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2" Style="font-weight:600">@item.EmployeeName</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Designation • @item.Department</MudText>
+                </MudStack>
+                <MudChip T="string" Size="Size.Small" Color="StatusColor" Variant="Variant.Text">@item.Status</MudChip>
+            </MudStack>
+        }
+    }
+</MudPaper>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public IReadOnlyList<PeerEvaluationDto> Items { get; set; } = Array.Empty<PeerEvaluationDto>();
+    [Parameter] public Color StatusColor { get; set; } = Color.Default;
+}

@@ -39,6 +39,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Goal> Goals => Set<Goal>();
     public DbSet<CompetencyRating> CompetencyRatings => Set<CompetencyRating>();
     public DbSet<PerResult> PerResults => Set<PerResult>();
+    public DbSet<EmployeeEvaluationSummary> EmployeeEvaluationSummaries => Set<EmployeeEvaluationSummary>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

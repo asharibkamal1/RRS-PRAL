@@ -27,8 +27,9 @@ public static class DependencyInjection
         // Stored-procedure execution (DB-team SPs), sharing the EF connection
         services.AddScoped<IStoredProcedureExecutor, StoredProcedureExecutor>();
 
-        // Feature service implementations (data-bound)
+        // Feature service implementations (data-bound; fetch only — no scoring)
         services.AddScoped<IProfileService, ProfileService>();
+        services.AddScoped<IDashboardService, DashboardService>();
 
         // Cross-cutting
         services.AddSingleton<IClock, SystemClock>();
