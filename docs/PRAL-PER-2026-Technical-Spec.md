@@ -2,9 +2,18 @@
 
 > **Project:** Performance Evaluation Report (PER) System — FY 2026
 > **CR ID:** CRF-HRIS-HRS-4 · **Project ID:** HRIS · **Module:** HRIS-HRS · **Dept:** FBR / PRAL
-> **Stack (confirmed):** Blazor — full .NET · SQL Server · EF Core
-> **HRMS data (confirmed):** Provided directly in DB tables — **no external API / integration required** (read-only consumption).
-> **Status:** Draft v1.0 — written spec for review *before* any code is written.
+> **Stack (confirmed):** Blazor — full .NET · **MudBlazor** UI · SQL Server · EF Core
+> **HRMS data (confirmed):** Consumed from DB tables — **no external API / integration**. A **local SQL Server DB** is used for development/demo now; the **Database team will later provide the production table schemas**, which we will switch to. Until then we own a local `Employee` table modeled on the HRMS employee profile (see §8).
+> **Auth (confirmed):** **App-managed** credentials via ASP.NET Core Identity (not AD/HRMS SSO).
+> **Status:** Draft v1.1 — written spec for review *before* any code is written.
+
+### Confirmed decisions (this revision)
+- **Q1 — 360° attributes are DESIGNATION-DRIVEN:** each ratee is rated only on the attributes mapped to **their designation** via the Attribute→Designation table (not a fixed list of 10).
+- **Q2 — UI library:** **MudBlazor**.
+- **Q3 — Employee report visibility:** employees **can view their own** PER report & scores.
+- **Q6 — Authentication:** **app-managed** (ASP.NET Core Identity), not AD/SSO.
+- **Q7 — Manager goal approval:** **no** separate approval workflow state — the manager simply sets the rating slider on the Goal Submission screen.
+- **DB strategy:** local SQL Server for now; swap to DB-team-provided schema when delivered (entities kept in an isolatable Infrastructure layer to ease the swap).
 
 ---
 
@@ -147,12 +156,13 @@ PRAL currently runs employee performance evaluation through a largely **manual**
 ### S11 — 360° Competency Rating (Section 3)
 - **Filter bar:** Rator Employee (dropdown, required), Ratee Department (optional filter), Filter, Save.
 - **Ratee list table:** S.No, Ratee Employee, Department, Status badge (Pending/Done/Blank), Expand/Collapse.
-- **Expanded panel per ratee:** 10 attribute labels, 10 rating sliders (1–10, default 5), 10 remarks textboxes.
+- **Expanded panel per ratee:** the attribute sliders + remarks textboxes for the attributes **mapped to that ratee's designation** (grouped by competency, per Annex-A image19). Each slider 1–10, default 5; live numeric display.
 - **Rules:**
   - **Rating Period must be Active** (page-load gate) — else error + return to Dashboard.
+  - **Designation-driven (Q1):** the attribute set per ratee = `DesignationAttributeMap` rows for the ratee's `DesignationId`. The count varies by role (not a hard-coded 10).
   - Only assigned rators appear; **self-rating excluded**.
-  - All 10 attributes must be rated for a row to be **Done**; partially rated/unsaved = **Pending**.
-  - **`Peer Score = Σ(10 ratings) ÷ 10`**
+  - **All** of the ratee's mapped attributes must be rated for the row to be **Done**; partially rated/unsaved = **Pending**.
+  - **`Peer Score = Σ(ratings) ÷ (count of mapped attributes)`** — average across the ratee's designation attributes.
 
 ### S12 — PER Report (read-only)
 - **Header:** Employee Selector (dropdown, required).
@@ -175,7 +185,7 @@ PRAL currently runs employee performance evaluation through a largely **manual**
 | Rule | Definition |
 |---|---|
 | **Goal Score** | `Σ (Rating_Gᵢ × Weight_Gᵢ)` for i = 1..5 |
-| **Peer Score** | `Σ(10 attribute ratings) ÷ 10` |
+| **Peer Score** | `Σ(attribute ratings) ÷ (count of the ratee's designation-mapped attributes)` — average. *(Designation-driven per Q1; CRF examples used 10 because the sample roles mapped 10 attributes.)* |
 | **Final PER Score** | `(Goal Score × 0.70) + (Peer Score × 0.30)` |
 | **Score colour** | `≥ 8.0` Green (High) · `≥ 6.0` Amber (Mid) · `< 6.0` Red (Low) |
 | **Goal weights** | Exactly 5 goals; weights must sum to **1.00** (block save otherwise) |
@@ -237,11 +247,50 @@ PralPer.sln
 ## 8. Data Model (first draft)
 
 > HRMS-sourced tables are **read-only** to this app. Application-owned tables are read/write.
+> **Note:** We own a **local** `Employee` table for dev/demo (schema below, modeled on the PRAL HRMS employee profile). When the Database team delivers production schemas, we map to theirs and retire the local definition.
 
-### HRMS-sourced (read-only) — provided in DB
-- **Employee** — `Id, HrCode, AccountsCode, Name, DepartmentId, Wing, PayGroup, DesignationId, ReportingManagerId, RecruitmentDate, LastPromotionDate, LastIncrementDate, LastIncrementBand(1–4), LastBonusDate, LastBonusBand(1–4)`
-- **Department** — `Id, Name`
-- **Designation** — `Id, Name`  *(Manager, Development, Database, HR, QA)*
+### HRMS-sourced (read-only) — local now, DB-team later
+
+**Employee** — modeled on the PRAL HRMS profile page:
+| Column | Type | Notes / Sample |
+|---|---|---|
+| `Id` | int PK | surrogate |
+| `HrCode` | nvarchar | e.g. `3657` |
+| `AccountsCode` | nvarchar | derived `ACC-{numeric HrCode}` for PER display |
+| `Name` | nvarchar | MUHAMMAD ASHARIB KAMAL |
+| `Title` | nvarchar | Mr |
+| `JobTitle` / `DesignationId` | FK | SOFTWARE ENGINEER → Designation |
+| `DepartmentId` | FK | SOFTWARE DEVELOPMENT |
+| `Wing` | nvarchar | DEVELOPMENT (PROVINCIAL REVENUE AUTHORITIES) |
+| `EmploymentStatus` | nvarchar | CONTRACTUAL |
+| `DateOfBirth` | date | Nov 6, 1993 |
+| `Gender` | nvarchar | Male |
+| `MaritalStatus` | nvarchar | Married |
+| `Cnic` | nvarchar | 61101-6679180-3 |
+| `CnicExpiry` | date | Jun 24, 2033 |
+| `BloodGroup` | nvarchar | A+ |
+| `HouseStreet` | nvarchar | H.NO.226-A |
+| `Area` | nvarchar | STREET NO.9, I-14/1 ISLAMABAD |
+| `City` / `Province` / `Country` / `ZipCode` | nvarchar | ISLAMABAD / ICT / PAKISTAN / 000000 |
+| `MobileNumber` / `TelephoneNumber` | nvarchar | 0315-5896001 |
+| `WorkEmail` / `Email` | nvarchar | Asharib.kamal@pral.com.pk |
+| `PayGrade` / `PayStep` / `PayGroup` | nvarchar | (PER profile fields) |
+| `PostingLocation` | nvarchar | PRAL HEAD QUARTERS |
+| `PostingLocationStartDate` / `CurrentStartDate` | date? | nullable (NA) |
+| `RmHrCode` | nvarchar | 404 |
+| `ReportingManagerId` / `RmName` | FK / nvarchar | MUHAMMAD MUDDASER ABBAS |
+| `RecruitmentDate` | date | original joining |
+| `LastPromotionDate` | date | |
+| `LastIncrementDate` | date | |
+| `LastIncrementBand` | int (1–4) | |
+| `LastBonusDate` | date | |
+| `LastBonusBand` | int (1–4) | |
+| `AttendancePercent` | decimal? | % of attendance |
+
+> The PER **Employee Profile screen (S3)** surfaces the CRF-listed subset (HR Code, Accounts Code, Dept, Wing, Pay Group, Designation, Reporting Manager, Evaluation Period, Recruitment/Promotion/Increment/Bonus dates & bands). Remaining columns are stored for completeness and future reuse.
+
+- **Department** — `Id, Name` *(e.g. Software Development, Database, Quality Assurance, Human Resources)*
+- **Designation** — `Id, Name` *(Manager, Development, Database, HR, QA, Software Engineer, …)*
 
 ### Application-owned (read/write)
 - **EvaluationPeriod** — `Id, StartDate, EndDate, Status(Active/Archive), Created*`
@@ -272,18 +321,24 @@ PralPer.sln
 
 ---
 
-## 10. Open Questions (for confirmation)
+## 10. Open Questions — status
 
-- **Q1 — 360° attributes:** Are the 10 rated attributes **fixed** (the Integrity + Team Work sets shown in CRF S11), or should they be **driven by the Attribute→Designation mapping** per ratee's designation? The CRF shows a fixed list in S11 but a configurable mapping in S8. *(This changes the rating screen design significantly.)*
-- **Q2 — UI component library:** **MudBlazor** (fast, batteries-included, easy charts/sliders/toasts) vs **Tailwind + custom components** (closest pixel match to the mockups, more effort)? Recommendation: **MudBlazor** for speed.
-- **Q3 — Employee report visibility:** Can an Employee view **their own** PER Report, or is the report **Admin/Manager-only**? CRF lists PER Report under Manager config but not explicitly under Employee.
-- **Q4 — Blazor render mode:** Confirm **Interactive Server** (recommended) vs WASM. Server is simpler for DB-heavy internal apps.
-- **Q5 — HRMS table contract:** Please share the **actual schema/column names** of the HRMS tables already in the DB so entities map exactly (names, types, keys).
-- **Q6 — Authentication source:** Do users log in via the same HRMS credentials / Active Directory, or do we manage credentials in this app's Identity store?
-- **Q7 — Manager goal rating step:** The Evaluation Flow mentions a separate "Manager Goal Rating — line manager reviews and approves goal ratings" step. Is approval a distinct workflow state, or is it the same as setting the rating slider on S10?
-- **Q8 — "Recent Activity" & timeline:** Confirm these are derived from audit records we generate (no separate source needed).
+| # | Question | Resolution |
+|---|---|---|
+| Q1 | 360 attributes fixed vs designation-driven | **Designation-driven** (mapped per ratee designation) |
+| Q2 | UI component library | **MudBlazor** |
+| Q3 | Employee can view own report | **Yes** |
+| Q4 | Blazor render mode | Proposed **Interactive Server** (please confirm) |
+| Q5 | HRMS table contract | Build **local** table now (schema in section 8); swap to DB-team schema later |
+| Q6 | Authentication source | **App-managed** (ASP.NET Core Identity) |
+| Q7 | Manager goal approval step | **No** separate state — slider rating only |
+| Q8 | Recent Activity & timeline source | Assumed derived from our audit records (please confirm) |
+
+### Remaining inputs needed
+- **Figma designs:** the proto URL is not machine-readable (403 / client-rendered). Please **export the frames as PNG/PDF** and upload, or share Dev-Mode specs. Until then we build to the **Annex-A mockups** embedded in the CRF.
+- **Designation-to-attribute seed mapping:** please confirm which attributes map to each designation. For dev we'll seed a sensible default that you can adjust via Screen S8.
 
 ---
 
 ## 11. Next Step
-On your confirmation of the open questions (especially **Q1, Q2, Q5**), I'll proceed to **Phase 0 (Foundation)**: scaffold the Blazor solution, set up EF Core + migrations + seed data, and stand up the base layout and authentication — committed to branch `claude/vigilant-gates-yTBYS`.
+With Q1/Q2/Q3/Q5/Q6/Q7 confirmed, I'll proceed to **Phase 0 (Foundation)**: scaffold the .NET 8 Blazor Web App (MudBlazor), set up EF Core + local SQL Server + migrations, seed competencies/attributes/designations + a sample `Employee` (using the provided HRMS profile), and stand up Identity + roles and the base sidebar layout — committed to branch `claude/vigilant-gates-yTBYS`.
