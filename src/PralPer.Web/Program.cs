@@ -16,7 +16,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddMudServices();
-builder.Services.AddControllers();        // MVC AccountController handles auth form posts
+builder.Services.AddControllersWithViews();   // MVC + antiforgery filter for AccountController
 builder.Services.AddHttpContextAccessor();
 
 // Application + Infrastructure (EF Core, Identity, repositories, UoW, stored-procedure layer)
