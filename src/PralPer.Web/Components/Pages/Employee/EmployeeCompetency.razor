@@ -1,0 +1,304 @@
+@page "/employee/competency"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@using System.Security.Claims
+@using PralPer.Application.Competency
+@inject ICompetencyService Competency
+
+<PageTitle>360° Competency Rating · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">360° Competency Rating</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">Peer review evaluation — competency attributes</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    <!-- Reviewer banner -->
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Style="background:linear-gradient(90deg,#2563EB,#1D4ED8);border-radius:12px;color:#fff">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+            <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.25)"></div>
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.h6" Style="font-weight:700;color:#fff">@(_reviewer?.Name)</MudText>
+                <MudText Typo="Typo.body2" Style="color:#E0E7FF">@(_reviewer?.JobTitle) • @(_reviewer?.Department)</MudText>
+            </MudStack>
+            <MudSpacer />
+            <MudStack Spacing="0" AlignItems="AlignItems.End">
+                <MudText Typo="Typo.caption" Style="color:#C7D2FE">Evaluating as</MudText>
+                <MudText Typo="Typo.body1" Style="font-weight:700;color:#fff">Peer Reviewer</MudText>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+
+    @if (!_ratingOpen)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">The rating period is not active.</MudAlert>
+    }
+    @if (_message is not null)
+    {
+        <MudAlert Severity="@_severity" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _message = null)">@_message</MudAlert>
+    }
+
+    <!-- Filter bar (dropdowns filled from tables) -->
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudGrid AlignItems="Center">
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" Label="Select Rater" Value="_selectedRaterId" ValueChanged="OnRaterChanged"
+                           Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var r in _raters)
+                    {
+                        <MudSelectItem T="int?" Value="@((int?)r.Id)">@r.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" Label="Select Ratee Department" @bind-Value="_selectedDeptId"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                    <MudSelectItem T="int?" Value="@((int?)null)">All Departments</MudSelectItem>
+                    @foreach (var d in _departments)
+                    {
+                        <MudSelectItem T="int?" Value="@((int?)d.Id)">@d.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="2">
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.FilterList" OnClick="LoadRatees">Filter</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" OnClick="@(() => Save(false))">Save</MudButton>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Ratee list -->
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-2">Ratee List</MudText>
+        <div class="ratee-head">
+            <span style="width:40px">SR.</span>
+            <span style="flex:1">RATEE EMPLOYEE</span>
+            <span style="width:160px">STATUS</span>
+            <span style="width:120px"></span>
+        </div>
+
+        @if (_ratees.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="py-3">No ratees assigned to this rater.</MudText>
+        }
+
+        @{ var sr = 0; }
+        @foreach (var ratee in _ratees)
+        {
+            sr++;
+            var isOpen = _expandedRateeId == ratee.EmployeeId;
+            <div class="ratee-row @(isOpen ? "open" : "")">
+                <span style="width:40px">@(sr).</span>
+                <span style="flex:1;font-weight:600">@ratee.Name</span>
+                <span style="width:160px">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                             Color="@(ratee.Status == "Done" ? Color.Success : Color.Warning)">@ratee.Status</MudChip>
+                </span>
+                <span style="width:120px;text-align:right">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined"
+                               EndIcon="@(isOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                               OnClick="@(() => ToggleExpand(ratee.EmployeeId))">
+                        @(isOpen ? "Collapse" : "Expand")
+                    </MudButton>
+                </span>
+            </div>
+
+            @if (isOpen)
+            {
+                <div class="ratee-expand">
+                    @foreach (var grp in _groups)
+                    {
+                        <div class="mb-3">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                                <span style="@($"width:6px;height:18px;border-radius:3px;background:{grp.Color}")"></span>
+                                <MudText Typo="Typo.subtitle1" Style="font-weight:700">@grp.Competency</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">(@grp.Attributes.Count attributes)</MudText>
+                            </MudStack>
+
+                            @foreach (var attr in grp.Attributes)
+                            {
+                                <MudPaper Class="pa-3 mb-2" Outlined="true">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                        <MudText Typo="Typo.body1" Style="font-weight:600">@attr.AttributeName</MudText>
+                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                            <MudIcon Icon="@Icons.Material.Filled.Star" Color="Color.Primary" Size="Size.Small" />
+                                            <MudText Typo="Typo.body2" Style="font-weight:700">@attr.Rating</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">out of 4</MudText>
+                                        </MudStack>
+                                    </MudStack>
+
+                                    <MudSlider T="int" Min="0" Max="4" Step="1" Color="Color.Primary" @bind-Value="attr.Rating" Class="mt-1" />
+
+                                    <MudStack Row="true" Spacing="0">
+                                        @for (var s = 1; s <= 4; s++)
+                                        {
+                                            <MudIcon Size="Size.Small"
+                                                     Icon="@(s <= attr.Rating ? Icons.Material.Filled.Star : Icons.Material.Filled.StarBorder)"
+                                                     Style="@(s <= attr.Rating ? "color:#F59E0B" : "color:#CBD5E1")" />
+                                        }
+                                    </MudStack>
+
+                                    <MudTextField @bind-Value="attr.Remarks" Label="Remarks" Variant="Variant.Text"
+                                                  Margin="Margin.Dense" Placeholder="Add remarks (optional)" Class="mt-1" />
+                                </MudPaper>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </MudPaper>
+
+    <!-- Overall peer evaluation score (live preview from entered ratings) -->
+    @if (_expandedRateeId is not null && _groups.Count > 0)
+    {
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-3">Overall Peer Evaluation Score</MudText>
+            <MudGrid>
+                @foreach (var grp in _groups)
+                {
+                    var avg = grp.Attributes.Count == 0 ? 0 : grp.Attributes.Average(a => a.Rating);
+                    <MudItem xs="12" md="6">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3">
+                            <MudText Typo="Typo.body2" Style="flex:1">@grp.Competency</MudText>
+                            <MudProgressLinear Value="@(avg / 4 * 100)" Style="@($"flex:1;color:{grp.Color}")" Rounded="true" />
+                            <MudText Typo="Typo.body2" Style="font-weight:700;width:40px;text-align:right">@avg.ToString("0.0")</MudText>
+                        </MudStack>
+                    </MudItem>
+                }
+            </MudGrid>
+            <MudGrid Class="mt-2">
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-3" Outlined="true">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">Total Competencies Rated</MudText>
+                            <MudText Typo="Typo.h6" Style="font-weight:700">@TotalRated</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudPaper Class="pa-3" Outlined="true" Style="background:#F0FDF4">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween">
+                            <MudText Typo="Typo.body2">Total Competency Assessment Score</MudText>
+                            <MudText Typo="Typo.h6" Style="font-weight:700;color:#16A34A">@OverallPercent.ToString("0.0")%</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Default" Size="Size.Large" Disabled="@_saving" OnClick="@(() => Save(false))">Save as Draft</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large" Disabled="@(!_ratingOpen || _saving)" OnClick="@(() => Save(true))">
+            @(_saving ? "Saving..." : "Submit Evaluation")
+        </MudButton>
+    </MudStack>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private IReadOnlyList<EmployeeOption> _raters = Array.Empty<EmployeeOption>();
+    private IReadOnlyList<DepartmentOption> _departments = Array.Empty<DepartmentOption>();
+    private IReadOnlyList<RateeRowDto> _ratees = Array.Empty<RateeRowDto>();
+    private List<CompetencyGroup> _groups = new();
+    private ReviewerInfo? _reviewer;
+
+    private int? _selectedRaterId;
+    private int? _selectedDeptId;
+    private int? _expandedRateeId;
+    private bool _ratingOpen;
+    private bool _loading = true;
+    private bool _saving;
+    private string? _message;
+    private Severity _severity = Severity.Success;
+
+    private int TotalRated => _groups.Sum(g => g.Attributes.Count);
+    private double OverallPercent
+    {
+        get
+        {
+            var all = _groups.SelectMany(g => g.Attributes).ToList();
+            return all.Count == 0 ? 0 : all.Average(a => a.Rating) / 4 * 100;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _selectedRaterId = await ResolveEmployeeIdAsync();
+        _ratingOpen = await Competency.IsRatingOpenAsync();
+        _raters = await Competency.GetRatersAsync();
+        _departments = await Competency.GetDepartmentsAsync();
+        await LoadRatees();
+        _loading = false;
+    }
+
+    private async Task OnRaterChanged(int? raterId)
+    {
+        _selectedRaterId = raterId;
+        await LoadRatees();
+    }
+
+    private async Task LoadRatees()
+    {
+        _expandedRateeId = null;
+        _groups = new();
+        if (_selectedRaterId is int rid)
+        {
+            _reviewer = await Competency.GetReviewerAsync(rid);
+            _ratees = await Competency.GetRateesAsync(rid, _selectedDeptId);
+        }
+    }
+
+    private async Task ToggleExpand(int rateeId)
+    {
+        if (_expandedRateeId == rateeId)
+        {
+            _expandedRateeId = null;
+            _groups = new();
+            return;
+        }
+        if (_selectedRaterId is int rid)
+        {
+            _expandedRateeId = rateeId;
+            _groups = (await Competency.GetRateeAttributesAsync(rid, rateeId)).ToList();
+        }
+    }
+
+    private async Task Save(bool submit)
+    {
+        _message = null;
+        if (_selectedRaterId is not int rid || _expandedRateeId is not int rateeId)
+        {
+            _severity = Severity.Warning;
+            _message = "Expand a ratee to rate before saving.";
+            return;
+        }
+
+        _saving = true;
+        var rows = _groups.SelectMany(g => g.Attributes).ToList();
+        var result = await Competency.SaveRatingsAsync(rid, rateeId, rows, submit);
+        _saving = false;
+
+        _severity = result.Succeeded ? Severity.Success : Severity.Error;
+        _message = result.Succeeded
+            ? (submit ? "Evaluation submitted successfully!" : "Draft saved.")
+            : result.Error;
+
+        if (result.Succeeded)
+            _ratees = await Competency.GetRateesAsync(rid, _selectedDeptId);
+    }
+
+    private async Task<int?> ResolveEmployeeIdAsync()
+    {
+        if (AuthState is null) return null;
+        var user = (await AuthState).User;
+        return int.TryParse(user.FindFirstValue("employee_id"), out var id) ? id : null;
+    }
+}
