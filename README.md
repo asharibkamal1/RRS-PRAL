@@ -83,6 +83,23 @@ The DB-team schema swap is isolated to Infrastructure.
 Multi-role accounts land on **Continue as** to pick the active role; single-role accounts go
 straight to their dashboard. Use **Switch** (top bar) to change the active role.
 
+## Troubleshooting
+
+### `PendingModelChangesWarning: The model for context 'AppDbContext' has pending changes`
+Your migration/snapshot is older than the current entity model (e.g. after pulling new changes).
+Add a migration that captures the changes, then run again:
+```bash
+dotnet ef migrations add <DescriptiveName> -p src/PralPer.Infrastructure -s src/PralPer.Web
+```
+If the database hasn't been created yet and you'd rather start clean, regenerate the initial migration:
+```bash
+dotnet ef database drop -f -p src/PralPer.Infrastructure -s src/PralPer.Web
+# delete src/PralPer.Infrastructure/Migrations
+dotnet ef migrations add InitialCreate -p src/PralPer.Infrastructure -s src/PralPer.Web
+dotnet run --project src/PralPer.Web
+```
+**Rule:** every change to entities or `AppDbContext` needs its own migration.
+
 ## Notes
 - Phase 0 screens render via **static server-side rendering**; interactivity (live weight-sum on
   Goal Submission, 360° sliders, dialogs) is enabled per-page (`@rendermode InteractiveServer`)
