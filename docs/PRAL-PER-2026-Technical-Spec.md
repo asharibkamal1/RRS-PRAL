@@ -142,16 +142,16 @@ PRAL currently runs employee performance evaluation through a largely **manual**
   - **Self-rating prevention:** ratee excluded from their own rator list.
   - Save toast: `Rators saved: N assigned`.
 
-### S10 — Goal Submission (Section 2)
-- **Header:** Ratee Officer (dropdown, required), Select Goal to Edit (dropdown, quick-jump).
-- **Goals table (exactly 5 rows G1–G5):** Goal/Target Description (text, required), Weight (number 0–1, step 0.05), Rating slider (1–10, manager-assessed), Save Goals.
+### S10 — Goal Submission (Section 2)  *(updated per final Figma + client confirmation)*
+- **Header:** Ratee/Employee (dropdown for Admin/Manager; self for Employee), Select Goal to Edit (dropdown, quick-jump).
+- **Goal cards (3–5):** Goal Title (text, required), Description (text), **Progress %** slider (self-reported 0–100), **Weight %** stepper (0–100), **Rating 1–10** (manager-assessed), per-row edit/save, Save Goals.
+- **Weight Summary** header: live bar `Σ weight / 100%`; helper "contributes 70% to Final PER".
 - **Rules:**
   - **Goal submission window must be open.**
-  - All 5 descriptions required.
-  - **CRITICAL:** sum of all 5 weights **= exactly 1.00**, else block save (live sum check in UI).
-  - Rating 1–10 integer (default pre-loaded or 5).
-  - Exactly 5 goals — no more, no fewer.
-  - **`Goal Score = Σ (Ratingᵢ × Weightᵢ)`**
+  - **Min 3, Max 5** goals; each goal Title required.
+  - **CRITICAL:** sum of weights **= exactly 100%**, else block save (live sum check). *(Stored internally as fraction; `weightFraction = weight% / 100`.)*
+  - Rating 1–10 integer; Progress 0–100%.
+  - **`Goal Score (0–10) = Σ ( (Weight%ᵢ / 100) × Ratingᵢ )`**
 
 ### S11 — 360° Competency Rating (Section 3)
 - **Filter bar:** Rator Employee (dropdown, required), Ratee Department (optional filter), Filter, Save.
@@ -184,11 +184,11 @@ PRAL currently runs employee performance evaluation through a largely **manual**
 
 | Rule | Definition |
 |---|---|
-| **Goal Score** | `Σ (Rating_Gᵢ × Weight_Gᵢ)` for i = 1..5 |
+| **Goal Score** | `Σ ( (WeightPercent_Gᵢ / 100) × Rating_Gᵢ )` over the employee's **3–5** goals → result on a 0–10 basis. Weights entered as % (Σ=100). |
 | **Peer Score** | `Σ(attribute ratings) ÷ (count of the ratee's designation-mapped attributes)` — average. *(Designation-driven per Q1; CRF examples used 10 because the sample roles mapped 10 attributes.)* |
 | **Final PER Score** | `(Goal Score × 0.70) + (Peer Score × 0.30)` |
 | **Score colour** | `≥ 8.0` Green (High) · `≥ 6.0` Amber (Mid) · `< 6.0` Red (Low) |
-| **Goal weights** | Exactly 5 goals; weights must sum to **1.00** (block save otherwise) |
+| **Goal weights** | **3–5 goals**; weights entered as **% summing to 100** (block save otherwise) |
 | **Period uniqueness** | Only **one Active** Evaluation period and one Active Rating period; previous auto-archived |
 | **Period gating** | Most screens verify "Evaluation/Rating Period Active" on page load; else redirect to Dashboard with error |
 | **Self-rating** | A person can never be their own rator (excluded in Assign Rators + 360° Rating) |
@@ -300,7 +300,7 @@ PralPer.sln
 - **Attribute** — `Id, CompetencyId, Name, Weight(decimal), IsActive`
 - **DesignationAttributeMap** — `Id, DesignationId, AttributeId, Weight` *(unique: DesignationId+AttributeId)*
 - **RatorAssignment** — `Id, EvaluationPeriodId, RateeEmployeeId, RatorEmployeeId` *(unique triple; self-assignment blocked)*
-- **Goal** — `Id, EvaluationPeriodId, EmployeeId, GoalNo(1–5), Description, Weight, Rating(1–10)`
+- **Goal** — `Id, EvaluationPeriodId, EmployeeId, GoalNo(1–5; min 3 rows), Title, Description, ProgressPercent(0–100), WeightPercent(0–100; per employee Σ=100), Rating(1–10), Created*`
 - **CompetencyRating** — `Id, RatingPeriodId, RateeEmployeeId, RatorEmployeeId, AttributeId, Rating(1–10), Remarks, Status`
 - **PerResult** *(computed/cached)* — `Id, EvaluationPeriodId, EmployeeId, GoalScore, PeerScore, FinalScore, GeneratedAt`
 

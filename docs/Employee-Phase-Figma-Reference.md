@@ -99,19 +99,26 @@ Top bar: PRAL logo + "Performance Evaluation System", notification bell, **"View
 
 ---
 
-## Proposed scoring model (Figma-based, pending confirmation)
+## Resolved decisions (client-confirmed — these override the Figma where noted)
+
+| Topic | **Confirmed decision** |
+|---|---|
+| **Rating scale** | **1–10** (CRF text). The Figma's 0–4 radios are superseded → goal & competency ratings use a **1–10** control. Scores computed on a 1–10 basis (optionally shown as % = score × 10). |
+| **Goal count** | **Min 3, Max 5** goals. |
+| **Goal weight input** | **Percent (0–100), must sum to 100%** in the UI; stored as a fraction internally. |
+| **Progress field** | **Keep** the per-goal **Progress %** slider (self-reported), separate from the 1–10 Rating. |
+| **360° attributes** | **Designation-driven** — each ratee rated only on attributes mapped to their designation (the "10 attributes" label is illustrative, not fixed). |
+| **Approval flow** | Employee Phase renders Manager Review / HoD Final Approval as **read-only status** only; the actual approval actions are built in the Manager/Admin phases. |
+
+### Confirmed scoring model (1–10 basis)
 ```
-RatingScale            = 0..4 (integer)
-GoalContribution_i (%) = (Weight%_i × Rating_i) / 4
-GoalScore (%)          = Σ GoalContribution_i           // weights sum to 100
-CompetencyScore (%)    = (Σ attribute/competency ratings) / (count × 4) × 100
-FinalPER (%)           = GoalScore × 0.70 + CompetencyScore × 0.30
-Colour                 = green ≥ 80 · amber ≥ 60 · red < 60   // (to confirm thresholds on 0–4/% basis)
+RatingScale         = 1..10 (integer)
+GoalScore (0..10)   = Σ ( (Weight%_i / 100) × Rating_i )      // 3..5 goals, weights sum to 100
+PeerScore (0..10)   = Σ(attribute ratings) / (count of ratee's designation-mapped attributes)
+FinalPER (0..10)    = GoalScore × 0.70 + PeerScore × 0.30
+Colour              = green ≥ 8.0 · amber ≥ 6.0 · red < 6.0   // (CRF thresholds)
+Display as %        = score × 10  (optional, to match the Figma's percentage styling)
 ```
 
-## Open confirmations for client
-1. **Rating scale = 0–4** everywhere (replaces CRF's 1–10)? 
-2. **Goals = Min 3 / Max 5** (replaces "exactly 5")?
-3. **360° attributes:** fixed 10, or designation-driven per ratee (your earlier Q1 = designation-driven)? Reconcile with the "10 competency attributes" label.
-4. **Approval workflow:** Figma report shows Manager Review + HoD Final Approval — should Employee Phase render these as read-only status only (approvals built in Manager/Admin phases)?
-5. **My Evaluations** screen exact content.
+### Still-open (minor) — confirm when convenient
+- **My Evaluations** screen exact content (assumed: peer evaluations I owe as a rator + my own results).
