@@ -9,6 +9,7 @@ public class AttributeItem : BaseEntity
     public Competency? Competency { get; set; }
 
     public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }       // shown under the attribute on the rating screen
     public decimal Weight { get; set; }            // 0.00–1.00 within its competency
     public bool IsActive { get; set; } = true;
 

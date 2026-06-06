@@ -24,7 +24,7 @@
             <MudText Typo="Typo.caption" Color="Color.Secondary">@CurrentUser.UserName</MudText>
         </MudStack>
 
-        <form method="post" action="/account/logout">
+        <form method="post" action="/account/logout" data-enhance="false">
             <AntiforgeryToken />
             <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text"
                        StartIcon="@Icons.Material.Filled.Logout" Color="Color.Default">

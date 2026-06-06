@@ -18,6 +18,7 @@ public class AttributeItemConfiguration : IEntityTypeConfiguration<AttributeItem
     public void Configure(EntityTypeBuilder<AttributeItem> b)
     {
         b.Property(a => a.Name).HasMaxLength(200).IsRequired();
+        b.Property(a => a.Description).HasMaxLength(300);
         b.Property(a => a.Weight).HasPrecision(5, 4);
 
         b.HasOne(a => a.Competency)

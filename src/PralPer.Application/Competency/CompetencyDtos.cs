@@ -8,8 +8,9 @@ public sealed class AttributeRatingRow
 {
     public int AttributeId { get; set; }
     public string AttributeName { get; set; } = string.Empty;
+    public string? Description { get; set; }
     public string? Remarks { get; set; }
-    public int Rating { get; set; }   // 0–4
+    public int Rating { get; set; }   // 0–10
 }
 
 /// <summary>A competency and its attributes (designation-driven) for one ratee.</summary>

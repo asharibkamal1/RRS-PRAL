@@ -59,37 +59,33 @@ public static class DataSeeder
         }
         await db.SaveChangesAsync();
 
-        // ---- Competencies & 20 attributes (CRF pre-load) ----
+        // ---- Competencies & 10 attributes (360° prototype) ----
+        var leadership = new Competency { Name = "Leadership & Innovation" };
         var integrity = new Competency { Name = "Integrity" };
-        var teamwork = new Competency { Name = "Team Work & Collaboration" };
-        var problem = new Competency { Name = "Problem Solving & Innovation" };
-        var ownership = new Competency { Name = "Takes Ownership" };
-        var leadership = new Competency { Name = "Leadership" };
-        db.Competencies.AddRange(integrity, teamwork, problem, ownership, leadership);
+        var communication = new Competency { Name = "Communication" };
+        db.Competencies.AddRange(leadership, integrity, communication);
         await db.SaveChangesAsync();
 
         var attrs = new List<AttributeItem>
         {
-            Attr(integrity, "Compliance", 0.20m), Attr(integrity, "Confidentiality", 0.20m),
-            Attr(integrity, "Transparency", 0.20m), Attr(integrity, "Ethics", 0.20m),
-            Attr(integrity, "Accountability", 0.20m),
-            Attr(teamwork, "Collaboration", 0.20m), Attr(teamwork, "Communication", 0.20m),
-            Attr(teamwork, "Support", 0.20m), Attr(teamwork, "Alignment", 0.20m),
-            Attr(teamwork, "Teamwork", 0.20m),
-            Attr(problem, "Analysis", 0.25m), Attr(problem, "Problem-Solving", 0.25m),
-            Attr(problem, "Innovation", 0.25m), Attr(problem, "Improvement", 0.25m),
-            Attr(ownership, "Accountability", 0.33m), Attr(ownership, "Commitment", 0.33m),
-            Attr(ownership, "Responsibility", 0.34m),
-            Attr(leadership, "Motivation", 0.33m), Attr(leadership, "Decision-Making", 0.33m),
-            Attr(leadership, "Vision", 0.34m),
+            Attr(leadership, "Leadership", 0.34m, "Ability to lead teams and inspire others"),
+            Attr(leadership, "Problem Solving", 0.33m, "Analytical thinking and solution finding"),
+            Attr(leadership, "Innovation", 0.33m, "Creative thinking and new ideas"),
+            Attr(integrity, "Honesty", 0.50m, "Works with dedication"),
+            Attr(integrity, "Work Ethics", 0.50m, "Respectful towards peers"),
+            Attr(communication, "Communication", 0.20m, "Clear and effective communication"),
+            Attr(communication, "Teamwork", 0.20m, "Collaboration and team contribution"),
+            Attr(communication, "Time Management", 0.20m, "Efficient use of time and prioritization"),
+            Attr(communication, "Adaptability", 0.20m, "Flexibility in changing environments"),
+            Attr(communication, "Client Relations", 0.20m, "Building strong client relationships"),
         };
         db.Attributes.AddRange(attrs);
         await db.SaveChangesAsync();
 
-        // ---- Designation→Attribute default map: the 10 Integrity + Team Work attributes per designation ----
-        var defaultTen = attrs.Where(a => a.CompetencyId == integrity.Id || a.CompetencyId == teamwork.Id).ToList();
+        // ---- Designation→Attribute map: all 10 attributes per designation ----
+        var allTen = attrs;
         foreach (var g in new[] { gManager, gDev, gDba, gHr, gQa })
-            foreach (var a in defaultTen)
+            foreach (var a in allTen)
                 db.DesignationAttributeMaps.Add(new DesignationAttributeMap { DesignationId = g.Id, AttributeId = a.Id, Weight = a.Weight });
         await db.SaveChangesAsync();
 
@@ -155,17 +151,18 @@ public static class DataSeeder
         }
         await db.SaveChangesAsync();
 
-        // ---- Sample peer ratings for Aamir from manager (all 10 mapped attributes) ----
+        // ---- Sample peer ratings for Aamir from manager (all 10 attributes, 0–10 scale) ----
         var ratingPeriod = await db.RatingPeriods.FirstAsync(rp => rp.EvaluationPeriodId == period.Id);
-        foreach (var a in defaultTen)
+        var sampleScores = new[] { 8, 9, 8, 9, 9, 7, 8, 7, 8, 7 };
+        for (var k = 0; k < allTen.Count; k++)
         {
             db.CompetencyRatings.Add(new CompetencyRating
             {
                 RatingPeriodId = ratingPeriod.Id,
                 RateeEmployeeId = aamir.Id,
                 RatorEmployeeId = mgr.Id,
-                AttributeId = a.Id,
-                Rating = 8,
+                AttributeId = allTen[k].Id,
+                Rating = sampleScores[k],
                 Status = RatingStatus.Done
             });
         }
@@ -291,6 +288,6 @@ public static class DataSeeder
         IsActive = true
     };
 
-    private static AttributeItem Attr(Competency c, string name, decimal weight)
-        => new() { CompetencyId = c.Id, Name = name, Weight = weight, IsActive = true };
+    private static AttributeItem Attr(Competency c, string name, decimal weight, string? description = null)
+        => new() { CompetencyId = c.Id, Name = name, Description = description, Weight = weight, IsActive = true };
 }

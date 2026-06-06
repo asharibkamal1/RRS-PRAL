@@ -15,7 +15,7 @@
     <div class="role-grid">
         @foreach (var role in CurrentUser.Roles)
         {
-            <form method="post" action="/account/set-active-role" class="role-card">
+            <form method="post" action="/account/set-active-role" class="role-card" data-enhance="false">
                 <AntiforgeryToken />
                 <input type="hidden" name="role" value="@role" />
                 <div class="role-icon">@RoleIcon(role)</div>
@@ -28,7 +28,7 @@
     </div>
 
     <div class="auth-footer">
-        <form method="post" action="/account/logout">
+        <form method="post" action="/account/logout" data-enhance="false">
             <AntiforgeryToken />
             <button type="submit" class="auth-textlink">← Back to Login</button>
         </form>

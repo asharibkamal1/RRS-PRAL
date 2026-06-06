@@ -20,11 +20,9 @@ public sealed class CompetencyService : ICompetencyService
 
     private static readonly Dictionary<string, string> CompetencyColors = new()
     {
-        ["Integrity"] = "#D97706",
-        ["Team Work & Collaboration"] = "#16A34A",
-        ["Problem Solving & Innovation"] = "#DC2626",
-        ["Takes Ownership"] = "#7C3AED",
-        ["Leadership"] = "#2563EB",
+        ["Leadership & Innovation"] = "#2563EB",
+        ["Integrity"] = "#7C3AED",
+        ["Communication"] = "#16A34A",
     };
 
     private Task<int> ActiveEvalPeriodIdAsync(CancellationToken ct) =>
@@ -107,6 +105,7 @@ public sealed class CompetencyService : ICompetencyService
             {
                 m.AttributeId,
                 AttributeName = m.Attribute!.Name,
+                AttributeDescription = m.Attribute!.Description,
                 Competency = m.Attribute!.Competency!.Name
             })
             .ToListAsync(ct);
@@ -129,6 +128,7 @@ public sealed class CompetencyService : ICompetencyService
                     {
                         AttributeId = m.AttributeId,
                         AttributeName = m.AttributeName,
+                        Description = m.AttributeDescription,
                         Rating = has ? v.Rating : 0,
                         Remarks = has ? v.Remarks : null
                     };
@@ -141,7 +141,7 @@ public sealed class CompetencyService : ICompetencyService
         var ratingPeriodId = await ActiveRatingPeriodIdAsync(ct);
         if (ratingPeriodId == 0) return Result.Failure("Rating period is not active.");
         if (rows.Count == 0) return Result.Failure("No attributes to rate.");
-        if (rows.Any(r => r.Rating is < 0 or > 4)) return Result.Failure("Ratings must be between 0 and 4.");
+        if (rows.Any(r => r.Rating is < 0 or > 10)) return Result.Failure("Ratings must be between 0 and 10.");
 
         var status = submit ? RatingStatus.Done : RatingStatus.Pending;
 

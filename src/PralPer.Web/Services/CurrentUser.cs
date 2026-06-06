@@ -1,18 +1,45 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http;
 using PralPer.Application.Abstractions;
 using PralPer.Web.Auth;
 
 namespace PralPer.Web.Services;
 
-/// <summary>Reads identity/claims from the current HTTP context (server-side rendering).</summary>
+/// <summary>
+/// Reads identity/claims from the current HTTP context (static SSR / prerender) or, when running
+/// inside an interactive Server circuit (no HttpContext), from the AuthenticationStateProvider.
+/// </summary>
 public sealed class CurrentUser : ICurrentUser
 {
     private readonly IHttpContextAccessor _http;
+    private readonly AuthenticationStateProvider _authState;
 
-    public CurrentUser(IHttpContextAccessor http) => _http = http;
+    public CurrentUser(IHttpContextAccessor http, AuthenticationStateProvider authState)
+    {
+        _http = http;
+        _authState = authState;
+    }
 
-    private ClaimsPrincipal? Principal => _http.HttpContext?.User;
+    private ClaimsPrincipal? Principal
+    {
+        get
+        {
+            var fromHttp = _http.HttpContext?.User;
+            if (fromHttp?.Identity?.IsAuthenticated == true)
+                return fromHttp;
+
+            try
+            {
+                // In a Server circuit this task is already completed.
+                return _authState.GetAuthenticationStateAsync().GetAwaiter().GetResult().User;
+            }
+            catch
+            {
+                return fromHttp; // e.g. during startup seeding (no circuit / no context)
+            }
+        }
+    }
 
     public bool IsAuthenticated => Principal?.Identity?.IsAuthenticated == true;
 
