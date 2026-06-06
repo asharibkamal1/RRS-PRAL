@@ -15,7 +15,8 @@ public static class DbInitializer
         var db = sp.GetRequiredService<AppDbContext>();
         await db.Database.MigrateAsync();
 
-        await DataSeeder.SeedAsync(db);     // reference + sample data first (Employee Ids 1..n)
-        await IdentitySeeder.SeedAsync(sp); // roles + demo users linked to those employees
+        await DataSeeder.SeedAsync(db);                 // reference + sample data (fresh DB only)
+        await DataSeeder.SeedProfileHistoryAsync(db);   // profile history for all employees (idempotent)
+        await IdentitySeeder.SeedAsync(sp);             // roles + demo users linked to those employees
     }
 }

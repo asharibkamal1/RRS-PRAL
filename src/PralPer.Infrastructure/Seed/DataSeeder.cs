@@ -59,24 +59,6 @@ public static class DataSeeder
         }
         await db.SaveChangesAsync();
 
-        // ---- HRMS history (dummy) for the demo employee (Aamir) ----
-        var profileEmp = emps[0];
-        db.PromotionHistories.AddRange(
-            new PromotionHistory { EmployeeId = profileEmp.Id, EffectiveDate = new DateTime(2024, 1, 1), FromTitle = "Software Engineer II", ToTitle = "Senior Software Engineer", Note = "Outstanding Performance" },
-            new PromotionHistory { EmployeeId = profileEmp.Id, EffectiveDate = new DateTime(2022, 6, 1), FromTitle = "Software Engineer I", ToTitle = "Software Engineer II", Note = "Consistent Growth" },
-            new PromotionHistory { EmployeeId = profileEmp.Id, EffectiveDate = new DateTime(2020, 1, 1), FromTitle = null, ToTitle = "Software Engineer I", Note = "New Hire" });
-        db.IncrementHistories.AddRange(
-            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2025, Percentage = 12, Amount = 8400 },
-            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2024, Percentage = 15, Amount = 9600 },
-            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2023, Percentage = 10, Amount = 6200 },
-            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2022, Percentage = 8, Amount = 4800 });
-        db.BonusHistories.AddRange(
-            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2025, BonusType = "Performance Bonus", Quarter = "Q4 2025", Amount = 5000 },
-            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2024, BonusType = "Annual Bonus", Quarter = "Q4 2024", Amount = 7500 },
-            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2024, BonusType = "Project Completion", Quarter = "Q2 2024", Amount = 3000 },
-            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2023, BonusType = "Performance Bonus", Quarter = "Q4 2023", Amount = 4500 });
-        await db.SaveChangesAsync();
-
         // ---- Competencies & 20 attributes (CRF pre-load) ----
         var integrity = new Competency { Name = "Integrity" };
         var teamwork = new Competency { Name = "Team Work & Collaboration" };
@@ -227,6 +209,66 @@ public static class DataSeeder
                 FeedbackUpdatedOn = new DateTime(2026, 5, 13)
             });
         }
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Seeds promotion/increment/bonus history for EVERY employee. Idempotent (skips if any
+    /// history already exists), so it populates an existing DB after the history migration
+    /// without needing a drop/reseed. The demo employee gets the exact Figma values.
+    /// </summary>
+    public static async Task SeedProfileHistoryAsync(AppDbContext db)
+    {
+        if (await db.PromotionHistories.AnyAsync()) return;
+
+        var employees = await db.Employees.Include(e => e.Designation).OrderBy(e => e.Id).ToListAsync();
+
+        foreach (var e in employees)
+        {
+            // Backfill a display title if missing.
+            if (string.IsNullOrWhiteSpace(e.JobTitle))
+                e.JobTitle = e.Designation?.Name;
+
+            var isDemo = string.Equals(e.WorkEmail, "employee@pral.com.pk", StringComparison.OrdinalIgnoreCase);
+
+            if (isDemo)
+            {
+                e.JobTitle = "Senior Software Engineer";
+                db.PromotionHistories.AddRange(
+                    new PromotionHistory { EmployeeId = e.Id, EffectiveDate = new DateTime(2024, 1, 1), FromTitle = "Software Engineer II", ToTitle = "Senior Software Engineer", Note = "Outstanding Performance" },
+                    new PromotionHistory { EmployeeId = e.Id, EffectiveDate = new DateTime(2022, 6, 1), FromTitle = "Software Engineer I", ToTitle = "Software Engineer II", Note = "Consistent Growth" },
+                    new PromotionHistory { EmployeeId = e.Id, EffectiveDate = new DateTime(2020, 1, 1), FromTitle = null, ToTitle = "Software Engineer I", Note = "New Hire" });
+                db.IncrementHistories.AddRange(
+                    new IncrementHistory { EmployeeId = e.Id, Year = 2025, Percentage = 12, Amount = 8400 },
+                    new IncrementHistory { EmployeeId = e.Id, Year = 2024, Percentage = 15, Amount = 9600 },
+                    new IncrementHistory { EmployeeId = e.Id, Year = 2023, Percentage = 10, Amount = 6200 },
+                    new IncrementHistory { EmployeeId = e.Id, Year = 2022, Percentage = 8, Amount = 4800 });
+                db.BonusHistories.AddRange(
+                    new BonusHistory { EmployeeId = e.Id, Year = 2025, BonusType = "Performance Bonus", Quarter = "Q4 2025", Amount = 5000 },
+                    new BonusHistory { EmployeeId = e.Id, Year = 2024, BonusType = "Annual Bonus", Quarter = "Q4 2024", Amount = 7500 },
+                    new BonusHistory { EmployeeId = e.Id, Year = 2024, BonusType = "Project Completion", Quarter = "Q2 2024", Amount = 3000 },
+                    new BonusHistory { EmployeeId = e.Id, Year = 2023, BonusType = "Performance Bonus", Quarter = "Q4 2023", Amount = 4500 });
+                continue;
+            }
+
+            // Generic, deterministic test data for every other employee.
+            var role = e.Designation?.Name ?? "Officer";
+            var joinYear = e.RecruitmentDate?.Year ?? 2020;
+            var bump = (e.Id % 5) * 300m;
+
+            db.PromotionHistories.AddRange(
+                new PromotionHistory { EmployeeId = e.Id, EffectiveDate = new DateTime(joinYear + 3, 3, 1), FromTitle = $"{role} II", ToTitle = $"Senior {role}", Note = "Strong Performance" },
+                new PromotionHistory { EmployeeId = e.Id, EffectiveDate = new DateTime(joinYear + 1, 7, 1), FromTitle = $"{role} I", ToTitle = $"{role} II", Note = "Promotion" },
+                new PromotionHistory { EmployeeId = e.Id, EffectiveDate = new DateTime(joinYear, 1, 15), FromTitle = null, ToTitle = $"{role} I", Note = "New Hire" });
+            db.IncrementHistories.AddRange(
+                new IncrementHistory { EmployeeId = e.Id, Year = 2025, Percentage = 10, Amount = 6000 + bump },
+                new IncrementHistory { EmployeeId = e.Id, Year = 2024, Percentage = 12, Amount = 5200 + bump },
+                new IncrementHistory { EmployeeId = e.Id, Year = 2023, Percentage = 8, Amount = 4200 + bump });
+            db.BonusHistories.AddRange(
+                new BonusHistory { EmployeeId = e.Id, Year = 2025, BonusType = "Performance Bonus", Quarter = "Q4 2025", Amount = 4000 + bump },
+                new BonusHistory { EmployeeId = e.Id, Year = 2024, BonusType = "Annual Bonus", Quarter = "Q4 2024", Amount = 6000 + bump });
+        }
+
         await db.SaveChangesAsync();
     }
 
