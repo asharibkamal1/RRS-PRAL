@@ -1,5 +1,6 @@
 @page "/employee/profile"
 @attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@using PralPer.Application.Profiles
 @inject IProfileService ProfileService
 @inject ICurrentUser CurrentUser
 
@@ -12,63 +13,141 @@
 {
     <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
 }
-else if (_employee is null)
+else if (_dto is null)
 {
     <MudAlert Severity="Severity.Warning">No employee record is linked to your account.</MudAlert>
 }
 else
 {
+    var e = _dto.Employee;
+
+    <!-- Header card -->
     <MudPaper Class="pa-5 mb-4" Elevation="1">
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
-            <MudAvatar Color="Color.Primary" Style="height:64px;width:64px">
-                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
-            </MudAvatar>
-            <MudStack Spacing="0">
-                <MudText Typo="Typo.h5" Style="font-weight:700">@_employee.Name</MudText>
-                <MudText Typo="Typo.subtitle1" Color="Color.Primary">@(_employee.Designation?.Name)</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">@_employee.WorkEmail</MudText>
+            <div style="width:64px;height:64px;border-radius:14px;background:#2563EB;display:flex;align-items:center;justify-content:center">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Style="color:#fff;font-size:34px" />
+            </div>
+            <MudStack Spacing="1">
+                <MudText Typo="Typo.h5" Style="font-weight:700">@e.Name</MudText>
+                <MudText Typo="Typo.subtitle1" Color="Color.Primary">@(e.JobTitle ?? e.Designation?.Name)</MudText>
+                <MudStack Row="true" Spacing="6" Class="mt-1">
+                    <span class="prof-meta"><MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" /> @e.WorkEmail</span>
+                    <span class="prof-meta"><MudIcon Icon="@Icons.Material.Filled.Phone" Size="Size.Small" /> @e.MobileNumber</span>
+                    <span class="prof-meta"><MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Size="Size.Small" /> Joined: @e.RecruitmentDate?.ToString("MMMM d, yyyy")</span>
+                </MudStack>
             </MudStack>
             <MudSpacer />
-            <MudChip T="string" Color="@(_employee.IsActive ? Color.Success : Color.Default)" Variant="Variant.Filled">
-                @(_employee.IsActive ? "Active" : "Inactive")
-            </MudChip>
+            <MudChip T="string" Color="@(e.IsActive ? Color.Success : Color.Default)" Variant="Variant.Filled">@(e.IsActive ? "Active" : "Inactive")</MudChip>
         </MudStack>
     </MudPaper>
 
+    <!-- Info cards -->
     <MudGrid>
         <MudItem xs="12" md="4">
             <InfoCard Title="HR Information" Icon="@Icons.Material.Filled.Badge">
-                <Field Label="HR Code" Value="@_employee.HrCode" />
-                <Field Label="Accounts Code" Value="@_employee.AccountsCode" />
-                <Field Label="Pay Group" Value="@_employee.PayGroup" />
-                <Field Label="Employment Status" Value="@_employee.EmploymentStatus" />
+                <Field Label="HR Code" Value="@e.HrCode" />
+                <Field Label="Accounts Code" Value="@e.AccountsCode" />
+                <Field Label="Pay Group" Value="@e.PayGroup" />
             </InfoCard>
         </MudItem>
         <MudItem xs="12" md="4">
             <InfoCard Title="Department Details" Icon="@Icons.Material.Filled.Business">
-                <Field Label="Department" Value="@(_employee.Department?.Name)" />
-                <Field Label="Wing" Value="@_employee.Wing" />
-                <Field Label="Reporting Manager" Value="@_employee.RmName" />
+                <Field Label="Department" Value="@(e.Department?.Name)" />
+                <Field Label="Wing" Value="@e.Wing" />
+                <Field Label="Reporting Manager" Value="@e.RmName" />
             </InfoCard>
         </MudItem>
         <MudItem xs="12" md="4">
             <InfoCard Title="Evaluation Period" Icon="@Icons.Material.Filled.CalendarMonth">
-                <Field Label="Designation" Value="@(_employee.Designation?.Name)" />
-                <Field Label="Recruitment Date" Value="@_employee.RecruitmentDate?.ToString("dd MMM yyyy")" />
-                <Field Label="Last Promotion" Value="@_employee.LastPromotionDate?.ToString("dd MMM yyyy")" />
+                <Field Label="Current Period" Value="@_dto.CurrentPeriodName" />
+                <Field Label="Designation" Value="@(e.JobTitle ?? e.Designation?.Name)" />
+                <Field Label="Tenure" Value="@Tenure(e.RecruitmentDate)" />
             </InfoCard>
         </MudItem>
     </MudGrid>
+
+    <!-- Promotion + Increment history -->
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" />
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:700">Promotion History</MudText>
+                </MudStack>
+                @foreach (var p in _dto.Promotions)
+                {
+                    <div style="border-left:3px solid #2563EB;padding:2px 0 12px 14px;margin-bottom:4px">
+                        <MudText Typo="Typo.body2" Style="font-weight:600">@p.Date.ToString("MMMM yyyy")</MudText>
+                        <MudText Typo="Typo.body2">@(p.FromTitle is null ? p.ToTitle : $"{p.FromTitle} → {p.ToTitle}")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@p.Note</MudText>
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" />
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:700">Increment History</MudText>
+                </MudStack>
+                <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+                    <thead><tr><th>Year</th><th>Percentage</th><th style="text-align:right">Amount</th></tr></thead>
+                    <tbody>
+                        @foreach (var i in _dto.Increments)
+                        {
+                            <tr>
+                                <td>@i.Year</td>
+                                <td><MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">@i.Percentage.ToString("0")%</MudChip></td>
+                                <td style="text-align:right">$@i.Amount.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Bonus history -->
+    <MudPaper Class="pa-4 mt-4" Elevation="1">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Color="Color.Tertiary" />
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700">Bonus History</MudText>
+        </MudStack>
+        <MudSimpleTable Dense="true" Hover="true" Elevation="0">
+            <thead><tr><th>Year</th><th>Type</th><th>Quarter</th><th style="text-align:right">Amount</th></tr></thead>
+            <tbody>
+                @foreach (var b in _dto.Bonuses)
+                {
+                    <tr>
+                        <td>@b.Year</td>
+                        <td>@b.Type</td>
+                        <td>@b.Quarter</td>
+                        <td style="text-align:right;color:#16A34A;font-weight:600">$@b.Amount.ToString("N0")</td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudPaper>
 }
 
 @code {
-    private Employee? _employee;
+    private EmployeeProfileDto? _dto;
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
         if (CurrentUser.EmployeeId is int id)
-            _employee = await ProfileService.GetByEmployeeIdAsync(id);
+            _dto = await ProfileService.GetProfileAsync(id);
         _loading = false;
+    }
+
+    private static string Tenure(DateTime? from)
+    {
+        if (from is null) return "—";
+        var now = DateTime.Now;
+        var months = (now.Year - from.Value.Year) * 12 + now.Month - from.Value.Month;
+        if (months < 0) months = 0;
+        return $"{months / 12} years, {months % 12} months";
     }
 }

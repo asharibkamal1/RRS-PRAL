@@ -4,6 +4,14 @@ html, body {
     background: #F8FAFC;
 }
 
+.prof-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748B;
+    font-size: 14px;
+}
+
 /* ---------- Auth screens (Sign In / Continue as) ---------- */
 .auth-shell {
     min-height: 100vh;

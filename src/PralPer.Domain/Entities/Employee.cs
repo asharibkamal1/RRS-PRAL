@@ -19,6 +19,7 @@ public class Employee : AuditableEntity
     public Department? Department { get; set; }
     public int DesignationId { get; set; }
     public Designation? Designation { get; set; }
+    public string? JobTitle { get; set; }                         // display title e.g. "Senior Software Engineer"
     public string? Wing { get; set; }
     public string? PayGroup { get; set; }                         // "Grade A - Level 3"
     public string? PayGrade { get; set; }
@@ -62,4 +63,9 @@ public class Employee : AuditableEntity
     public decimal? AttendancePercent { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    // History (HRMS-sourced)
+    public ICollection<PromotionHistory> Promotions { get; set; } = new List<PromotionHistory>();
+    public ICollection<IncrementHistory> Increments { get; set; } = new List<IncrementHistory>();
+    public ICollection<BonusHistory> Bonuses { get; set; } = new List<BonusHistory>();
 }

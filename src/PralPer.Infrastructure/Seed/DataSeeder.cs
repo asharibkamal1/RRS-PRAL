@@ -38,7 +38,7 @@ public static class DataSeeder
         // ---- Employees (Ids 1..8 in insert order on a fresh DB) ----
         var emps = new List<Employee>
         {
-            New("HR-2024-0145", "Aamir Abdul Aziz",       dIt, gDev,     wing: "Development Wing", pay: "Grade A - Level 3", email: "employee@pral.com.pk"),
+            New("HR-2024-0145", "Aamir Abdul Aziz",       dIt, gDev,     wing: "Development Wing", pay: "Grade A - Level 3", email: "employee@pral.com.pk", jobTitle: "Senior Software Engineer"),
             New("PRAL-EMP-002", "Abdul Hafeez Butt",      dIt, gManager, wing: "Development Wing", pay: "Grade A - Level 4", email: "manager@pral.com.pk"),
             New("PRAL-EMP-234", "Abdul Wadood Sherani",   dIt, gDev,     wing: "Development Wing", pay: "Grade A - Level 3", email: "admin@pral.com.pk"),
             New("PRAL-EMP-004", "Abdul Rehman",           dIt, gDev,     wing: "Development Wing", pay: "Grade A - Level 2"),
@@ -57,6 +57,24 @@ public static class DataSeeder
             e.ReportingManagerId = mgr.Id;
             e.RmName = mgr.Name;
         }
+        await db.SaveChangesAsync();
+
+        // ---- HRMS history (dummy) for the demo employee (Aamir) ----
+        var profileEmp = emps[0];
+        db.PromotionHistories.AddRange(
+            new PromotionHistory { EmployeeId = profileEmp.Id, EffectiveDate = new DateTime(2024, 1, 1), FromTitle = "Software Engineer II", ToTitle = "Senior Software Engineer", Note = "Outstanding Performance" },
+            new PromotionHistory { EmployeeId = profileEmp.Id, EffectiveDate = new DateTime(2022, 6, 1), FromTitle = "Software Engineer I", ToTitle = "Software Engineer II", Note = "Consistent Growth" },
+            new PromotionHistory { EmployeeId = profileEmp.Id, EffectiveDate = new DateTime(2020, 1, 1), FromTitle = null, ToTitle = "Software Engineer I", Note = "New Hire" });
+        db.IncrementHistories.AddRange(
+            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2025, Percentage = 12, Amount = 8400 },
+            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2024, Percentage = 15, Amount = 9600 },
+            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2023, Percentage = 10, Amount = 6200 },
+            new IncrementHistory { EmployeeId = profileEmp.Id, Year = 2022, Percentage = 8, Amount = 4800 });
+        db.BonusHistories.AddRange(
+            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2025, BonusType = "Performance Bonus", Quarter = "Q4 2025", Amount = 5000 },
+            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2024, BonusType = "Annual Bonus", Quarter = "Q4 2024", Amount = 7500 },
+            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2024, BonusType = "Project Completion", Quarter = "Q2 2024", Amount = 3000 },
+            new BonusHistory { EmployeeId = profileEmp.Id, Year = 2023, BonusType = "Performance Bonus", Quarter = "Q4 2023", Amount = 4500 });
         await db.SaveChangesAsync();
 
         // ---- Competencies & 20 attributes (CRF pre-load) ----
@@ -213,7 +231,7 @@ public static class DataSeeder
     }
 
     private static Employee New(string hr, string name, Department dept, Designation desig,
-        string? wing = null, string? pay = null, string? email = null) => new()
+        string? wing = null, string? pay = null, string? email = null, string? jobTitle = null) => new()
     {
         HrCode = hr,
         AccountsCode = "ACC-" + new string(hr.Where(char.IsDigit).ToArray()),
@@ -221,10 +239,12 @@ public static class DataSeeder
         Title = "Mr",
         DepartmentId = dept.Id,
         DesignationId = desig.Id,
+        JobTitle = jobTitle ?? desig.Name,
         Wing = wing,
         PayGroup = pay,
         EmploymentStatus = "CONTRACTUAL",
         WorkEmail = email,
+        MobileNumber = "+92 (051) 111-772-572",
         RecruitmentDate = new DateTime(2020, 1, 15),
         IsActive = true
     };
