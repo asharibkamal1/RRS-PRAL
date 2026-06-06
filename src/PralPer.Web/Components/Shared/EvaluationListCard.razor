@@ -15,7 +15,25 @@
                     <MudText Typo="Typo.body2" Style="font-weight:600">@item.EmployeeName</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Designation • @item.Department</MudText>
                 </MudStack>
-                <MudChip T="string" Size="Size.Small" Color="StatusColor" Variant="Variant.Text">@item.Status</MudChip>
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    @if (Evaluatable)
+                    {
+                        @if (item.DaysLeft is int d)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Text">@d days left</MudChip>
+                        }
+                        <MudButton Href="/employee/competency" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary">Evaluate</MudButton>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">@item.Status</MudChip>
+                        @if (!string.IsNullOrEmpty(item.SubmittedOn))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@item.SubmittedOn</MudText>
+                        }
+                    }
+                </MudStack>
             </MudStack>
         }
     }
@@ -24,5 +42,7 @@
 @code {
     [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
     [Parameter, EditorRequired] public IReadOnlyList<PeerEvaluationDto> Items { get; set; } = Array.Empty<PeerEvaluationDto>();
-    [Parameter] public Color StatusColor { get; set; } = Color.Default;
+
+    /// <summary>Pending mode shows a "days left" chip + Evaluate button; otherwise a Submitted badge + date.</summary>
+    [Parameter] public bool Evaluatable { get; set; }
 }

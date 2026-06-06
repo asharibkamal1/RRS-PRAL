@@ -59,10 +59,12 @@ public sealed class DashboardService : IDashboardService
             .Distinct()
             .ToListAsync(ct);
 
+        var daysLeft = summary?.DaysUntilDeadline;
         var pending = assignments.Where(a => !doneRateeIds.Contains(a.RateeEmployeeId))
-            .Select(a => new PeerEvaluationDto(a.Name, a.Designation, a.Department, "Pending")).ToList();
+            .Select(a => new PeerEvaluationDto(a.Name, a.Designation, a.Department, "Pending", DaysLeft: daysLeft)).ToList();
         var completed = assignments.Where(a => doneRateeIds.Contains(a.RateeEmployeeId))
-            .Select(a => new PeerEvaluationDto(a.Name, a.Designation, a.Department, "Submitted")).ToList();
+            .Select(a => new PeerEvaluationDto(a.Name, a.Designation, a.Department, "Submitted",
+                SubmittedOn: summary?.FeedbackUpdatedOn?.ToString("MMM d"))).ToList();
 
         return new EmployeeDashboardDto(
             summary?.GoalCompletionPercent ?? 0,

@@ -5,7 +5,13 @@ namespace PralPer.Application.Dashboards;
 
 public sealed record GoalProgressDto(string Title, decimal WeightPercent, decimal ProgressPercent);
 
-public sealed record PeerEvaluationDto(string EmployeeName, string Designation, string Department, string Status);
+public sealed record PeerEvaluationDto(
+    string EmployeeName,
+    string Designation,
+    string Department,
+    string Status,
+    int? DaysLeft = null,
+    string? SubmittedOn = null);
 
 public sealed record EmployeeDashboardDto(
     decimal GoalCompletionPercent,

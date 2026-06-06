@@ -1,15 +1,11 @@
-@* Reusable KPI summary card with a coloured top accent (Figma dashboard style). *@
+@* Reusable KPI summary card (icon tile top-left + label + value), Figma dashboard style. *@
 
-<MudPaper Class="pa-4" Elevation="1" Style="@($"border-top:4px solid {Accent};border-radius:10px;height:100%")">
-    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-        <MudStack Spacing="1">
-            <MudText Typo="Typo.body2" Color="Color.Secondary">@Title</MudText>
-            <MudText Typo="Typo.h5" Style="font-weight:700">@Value</MudText>
-        </MudStack>
-        <MudAvatar Style="@($"background-color:{Accent}1A;color:{Accent}")" Variant="Variant.Filled">
-            <MudIcon Icon="@Icon" />
-        </MudAvatar>
-    </MudStack>
+<MudPaper Class="pa-4" Elevation="1" Style="@($"border-radius:12px;height:100%")">
+    <div style="@($"width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{Accent}1A;color:{Accent};margin-bottom:12px")">
+        <MudIcon Icon="@Icon" />
+    </div>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">@Title</MudText>
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Value</MudText>
 </MudPaper>
 
 @code {

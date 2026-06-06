@@ -8,7 +8,7 @@
 
 <MudText Typo="Typo.h4" Class="mb-1">Employee Dashboard</MudText>
 <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-5">
-    Good day, @CurrentUser.DisplayName! Here's your performance evaluation overview.
+    @Greeting, @CurrentUser.DisplayName! Here's your performance evaluation overview.
 </MudText>
 
 @if (_loading)
@@ -59,7 +59,8 @@ else
         </MudItem>
     </MudGrid>
 
-    <MudText Typo="Typo.h5" Class="mt-6 mb-3">Peer Rating Overview</MudText>
+    <MudText Typo="Typo.h5" Class="mt-6 mb-0">Peer Rating Overview</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">An overview of your assigned peer ratings</MudText>
     <MudGrid>
         <MudItem xs="12" sm="4"><KpiCard Title="Pending Evaluations" Value="@_dto.PendingEvaluations.ToString()" Icon="@Icons.Material.Filled.HourglassBottom" Accent="#D97706" /></MudItem>
         <MudItem xs="12" sm="4"><KpiCard Title="Submitted Evaluations" Value="@_dto.SubmittedEvaluations.ToString()" Icon="@Icons.Material.Filled.CheckCircle" Accent="#16A34A" /></MudItem>
@@ -82,10 +83,10 @@ else
 
     <MudGrid Class="mt-2">
         <MudItem xs="12" md="6">
-            <EvaluationListCard Title="Pending Evaluations" Items="_dto.PendingList" StatusColor="Color.Warning" />
+            <EvaluationListCard Title="Pending Evaluations" Items="_dto.PendingList" Evaluatable="true" />
         </MudItem>
         <MudItem xs="12" md="6">
-            <EvaluationListCard Title="Completed Evaluations" Items="_dto.CompletedList" StatusColor="Color.Success" />
+            <EvaluationListCard Title="Completed Evaluations" Items="_dto.CompletedList" />
         </MudItem>
     </MudGrid>
 }
@@ -93,6 +94,13 @@ else
 @code {
     private EmployeeDashboardDto? _dto;
     private bool _loading = true;
+
+    private string Greeting => DateTime.Now.Hour switch
+    {
+        < 12 => "Good morning",
+        < 17 => "Good afternoon",
+        _ => "Good evening"
+    };
 
     protected override async Task OnInitializedAsync()
     {
