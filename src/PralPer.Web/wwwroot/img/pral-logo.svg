@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="PRAL logo">
+  <defs>
+    <linearGradient id="pralBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2A5CB8"/>
+      <stop offset="1" stop-color="#15397A"/>
+    </linearGradient>
+    <linearGradient id="pralGreen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3FB44E"/>
+      <stop offset="1" stop-color="#1E8E3E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Circuit traces (right side) -->
+  <g stroke="url(#pralGreen)" stroke-width="3" fill="#1E8E3E" stroke-linecap="round">
+    <line x1="96" y1="44" x2="116" y2="44"/><circle cx="118" cy="44" r="4"/>
+    <line x1="100" y1="64" x2="122" y2="64"/><circle cx="124" cy="64" r="4"/>
+    <line x1="96" y1="84" x2="116" y2="84"/><circle cx="118" cy="84" r="4"/>
+    <line x1="108" y1="44" x2="108" y2="64"/>
+  </g>
+
+  <!-- Blue gear: 10 teeth around a ring -->
+  <g fill="url(#pralBlue)">
+    <g>
+      <rect x="56" y="2" width="16" height="22" rx="3"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(36 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(72 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(108 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(144 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(180 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(216 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(252 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(288 64 64)"/>
+      <rect x="56" y="2" width="16" height="22" rx="3" transform="rotate(324 64 64)"/>
+    </g>
+    <circle cx="64" cy="64" r="46"/>
+  </g>
+
+  <!-- Green inner disc -->
+  <circle cx="64" cy="64" r="36" fill="url(#pralGreen)"/>
+
+  <!-- White crescent (white disc carved by a green disc) -->
+  <circle cx="60" cy="64" r="22" fill="#FFFFFF"/>
+  <circle cx="69" cy="60" r="20" fill="url(#pralGreen)"/>
+
+  <!-- White 5-point star -->
+  <path fill="#FFFFFF" d="M75 56 l2.7 5.6 6.1 0.8 -4.5 4.2 1.1 6.1 -5.4 -2.9 -5.4 2.9 1.1 -6.1 -4.5 -4.2 6.1 -0.8 z"/>
+</svg>

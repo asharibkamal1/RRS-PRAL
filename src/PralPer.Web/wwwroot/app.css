@@ -24,7 +24,7 @@ html, body {
 }
 
 .auth-brand { text-align: center; }
-.auth-logo { font-size: 40px; }
+.auth-logo { width: 88px; height: 88px; display: inline-block; }
 .auth-brand h1 { margin: 6px 0 0; font-size: 28px; font-weight: 800; color: #0F172A; }
 .auth-brand p { margin: 4px 0 0; color: #64748B; }
 
