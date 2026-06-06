@@ -12,6 +12,17 @@ html, body {
     font-size: 14px;
 }
 
+/* Goal rating (0-4) control */
+.rating-row { display: flex; gap: 14px; align-items: flex-start; }
+.rating-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.rating-num { font-size: 13px; font-weight: 700; }
+.rating-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid #CBD5E1; background: transparent;
+    transition: background .12s, border-color .12s;
+}
+.rating-dot.sel { box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+
 /* ---------- Auth screens (Sign In / Continue as) ---------- */
 .auth-shell {
     min-height: 100vh;

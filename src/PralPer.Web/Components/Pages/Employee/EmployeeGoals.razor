@@ -1,0 +1,172 @@
+@page "/employee/goals"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@using System.Security.Claims
+@using PralPer.Application.Goals
+@inject IGoalService GoalService
+
+<PageTitle>Goal Submission · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Goal Submission</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+    Submit Min 3, Max 5 performance goals (Total weight must equal 100%)
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    @if (!_submissionOpen)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mb-4">Goal submission is currently closed for this period.</MudAlert>
+    }
+    @if (_message is not null)
+    {
+        <MudAlert Severity="@_messageSeverity" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => _message = null)">@_message</MudAlert>
+    }
+
+    <!-- Weight summary -->
+    <MudPaper Class="pa-4 mb-5" Elevation="1">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+            <MudText Typo="Typo.h6">Goal Assessment Weight Summary</MudText>
+            <MudText Typo="Typo.h6" Style="@($"font-weight:700;color:{(IsWeightValid ? "#16A34A" : "#D97706")}")">
+                @TotalWeight.ToString("0")% / 100%
+            </MudText>
+        </MudStack>
+        <MudProgressLinear Value="@((double)Math.Min(TotalWeight, 100))" Rounded="true" Size="Size.Large"
+                           Color="@(IsWeightValid ? Color.Success : Color.Warning)" Class="mb-3" />
+        <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Dense="true">
+            Total Goal Weight = @TotalWeight.ToString("0")%. This will contribute 70% to your Final PER Score.
+        </MudAlert>
+    </MudPaper>
+
+    @for (var i = 0; i < _goals.Count; i++)
+    {
+        var goal = _goals[i];
+        var index = i + 1;
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+                <MudText Typo="Typo.h6">Goal @index</MudText>
+                <MudStack Row="true" Spacing="1">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" />
+                    <MudIcon Icon="@Icons.Material.Filled.Save" Color="Color.Primary" Size="Size.Small" />
+                </MudStack>
+            </MudStack>
+
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudTextField @bind-Value="goal.Title" Label="Goal Title" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Immediate="true" Placeholder="Enter goal title" />
+                </MudItem>
+                <MudItem xs="12" md="8">
+                    <MudTextField @bind-Value="goal.Description" Label="Description" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" Placeholder="Describe the goal and expected outcomes..." />
+                </MudItem>
+            </MudGrid>
+
+            <MudGrid Class="mt-1" AlignItems="Center">
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Progress &nbsp; <b>@goal.ProgressPercent.ToString("0")%</b></MudText>
+                    <MudSlider T="decimal" @bind-Value="goal.ProgressPercent" Min="0" Max="100" Step="5" Color="Color.Primary" />
+                </MudItem>
+                <MudItem xs="6" md="2">
+                    <MudNumericField @bind-Value="goal.WeightPercent" Label="Weight %" Variant="Variant.Outlined"
+                                     Margin="Margin.Dense" Min="0" Max="100" Step="5" Immediate="true" />
+                </MudItem>
+                <MudItem xs="6" md="4">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">Rating (0-4)</MudText>
+                    <div class="rating-row">
+                        @foreach (var v in _ratingValues)
+                        {
+                            var val = v;
+                            <div class="rating-opt" @onclick="() => goal.Rating = val">
+                                <span class="rating-num" style="@($"color:{RatingColor(val)}")">@val</span>
+                                <span class="rating-dot @(goal.Rating == val ? "sel" : "")"
+                                      style="@($"border-color:{RatingColor(val)};{(goal.Rating == val ? $"background:{RatingColor(val)}" : "")}")"></span>
+                            </div>
+                        }
+                    </div>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+    }
+
+    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                   StartIcon="@Icons.Material.Filled.Send"
+                   Disabled="@(!_submissionOpen || _saving)"
+                   OnClick="SaveGoals">
+            @(_saving ? "Saving..." : "Submit Goals")
+        </MudButton>
+    </MudStack>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private readonly int[] _ratingValues = { 4, 3, 2, 1, 0 };
+    private List<GoalInput> _goals = new();
+    private int? _employeeId;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _submissionOpen;
+    private string? _message;
+    private Severity _messageSeverity = Severity.Success;
+
+    private decimal TotalWeight => _goals.Where(g => g.HasContent).Sum(g => g.WeightPercent);
+    private bool IsWeightValid => TotalWeight == 100m;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _employeeId = await ResolveEmployeeIdAsync();
+        _submissionOpen = await GoalService.IsSubmissionOpenAsync();
+
+        // Start with 5 blank rows, then overlay any saved goals.
+        _goals = Enumerable.Range(1, 5).Select(n => new GoalInput { GoalNo = n }).ToList();
+
+        if (_employeeId is int id)
+        {
+            var saved = await GoalService.GetMyGoalsAsync(id);
+            for (var i = 0; i < saved.Count && i < 5; i++)
+            {
+                _goals[i].Title = saved[i].Title;
+                _goals[i].Description = saved[i].Description;
+                _goals[i].ProgressPercent = saved[i].ProgressPercent;
+                _goals[i].WeightPercent = saved[i].WeightPercent;
+                _goals[i].Rating = saved[i].Rating;
+            }
+        }
+
+        _loading = false;
+    }
+
+    private async Task SaveGoals()
+    {
+        if (_employeeId is not int id) return;
+        _saving = true;
+        _message = null;
+
+        var result = await GoalService.SaveMyGoalsAsync(id, _goals);
+
+        _messageSeverity = result.Succeeded ? Severity.Success : Severity.Error;
+        _message = result.Succeeded ? "Goals saved successfully!" : result.Error;
+        _saving = false;
+    }
+
+    private async Task<int?> ResolveEmployeeIdAsync()
+    {
+        if (AuthState is null) return null;
+        var user = (await AuthState).User;
+        return int.TryParse(user.FindFirstValue("employee_id"), out var id) ? id : null;
+    }
+
+    private static string RatingColor(int v) => v switch
+    {
+        >= 3 => "#16A34A",
+        2 => "#D97706",
+        1 => "#F97316",
+        _ => "#DC2626"
+    };
+}

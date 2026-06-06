@@ -30,6 +30,7 @@ public static class DependencyInjection
         // Feature service implementations (data-bound; fetch only — no scoring)
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IGoalService, GoalService>();
 
         // Cross-cutting
         services.AddSingleton<IClock, SystemClock>();
