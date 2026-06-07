@@ -1,0 +1,13 @@
+@* One milestone in the PER approval status row. *@
+
+<MudStack AlignItems="AlignItems.Center" Spacing="1">
+    <MudIcon Icon="@Icons.Material.Filled.CheckCircle"
+             Style="@($"color:{(Date.HasValue ? "#16A34A" : "#CBD5E1")};font-size:34px")" />
+    <MudText Typo="Typo.body2" Style="font-weight:600" Align="Align.Center">@Label</MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary">@(Date?.ToString("MMM d") ?? "—")</MudText>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter] public DateTime? Date { get; set; }
+}

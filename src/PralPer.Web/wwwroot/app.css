@@ -4,6 +4,13 @@ html, body {
     background: #F8FAFC;
 }
 
+/* Print: show only the report, hide app chrome */
+@media print {
+    .mud-appbar, .mud-drawer, .no-print { display: none !important; }
+    .mud-main-content { padding: 0 !important; margin: 0 !important; }
+    body { background: #fff; }
+}
+
 .prof-meta {
     display: inline-flex;
     align-items: center;

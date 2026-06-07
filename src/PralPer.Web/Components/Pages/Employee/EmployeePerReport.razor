@@ -1,0 +1,250 @@
+@page "/employee/report"
+@attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@using System.Security.Claims
+@using PralPer.Application.Reports
+@inject IPerReportService Reports
+@inject IJSRuntime JS
+
+<PageTitle>Final PER Report · PRAL PER</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_r is null)
+{
+    <MudAlert Severity="Severity.Info">No finalized PER report is available for the active period yet.</MudAlert>
+}
+else
+{
+    <div id="per-report">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
+            <div>
+                <MudText Typo="Typo.h4">Final PER Report</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Performance Evaluation Report - @_r.PeriodName</MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download"
+                       Class="no-print" OnClick="DownloadPdf">Download PDF</MudButton>
+        </MudStack>
+
+        <!-- Header banner -->
+        <MudPaper Class="pa-5 mb-4" Elevation="0" Style="background:linear-gradient(90deg,#2563EB,#1D4ED8);border-radius:14px;color:#fff">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="4">
+                <div style="width:60px;height:60px;border-radius:12px;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Style="color:#fff;font-size:32px" />
+                </div>
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.h5" Style="font-weight:700;color:#fff">@_r.EmployeeName</MudText>
+                    <MudText Typo="Typo.subtitle1" Style="color:#E0E7FF">@_r.JobTitle</MudText>
+                    <MudText Typo="Typo.caption" Style="color:#C7D2FE">@_r.HrCode • @_r.Department • Pay Group: @_r.PayGroup</MudText>
+                </MudStack>
+                <MudSpacer />
+                <MudStack Spacing="2" AlignItems="AlignItems.End">
+                    @if (_r.Approved)
+                    {
+                        <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Icon="@Icons.Material.Filled.CheckCircle">Approved</MudChip>
+                    }
+                    <MudText Typo="Typo.caption" Style="color:#C7D2FE">Manager: @_r.ManagerName</MudText>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Promotion & Increment history -->
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-3">Promotion and Increment History</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="4"><Field Label="Recruitment Date" Value="@_r.RecruitmentDate?.ToString("dd MMM yyyy")" /></MudItem>
+                <MudItem xs="12" md="4"><Field Label="Last Promotion Date" Value="@_r.LastPromotionDate?.ToString("dd MMM yyyy")" /></MudItem>
+                <MudItem xs="12" md="4"><Field Label="Last Increment Date" Value="@_r.LastIncrementDate?.ToString("dd MMM yyyy")" /></MudItem>
+                <MudItem xs="12" md="4"><Field Label="Last Increment 1-4" Value="@_r.LastIncrementBand?.ToString()" /></MudItem>
+                <MudItem xs="12" md="4"><Field Label="Last Bonus Date" Value="@_r.LastBonusDate?.ToString("dd MMM yyyy")" /></MudItem>
+                <MudItem xs="12" md="4"><Field Label="Last Bonus 1-4" Value="@_r.LastBonusBand?.ToString()" /></MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Score summary cards -->
+        <MudGrid Class="mb-2">
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1" Style="background:#EFF6FF;border-radius:12px">
+                    <MudText Typo="Typo.body2" Color="Color.Primary" Style="font-weight:600">★ Goal Assessment Score</MudText>
+                    <MudText Typo="Typo.h4" Style="font-weight:800">@_r.GoalScorePercent.ToString("0")%</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Total Goal Weight = 100%</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1" Style="background:#F5F3FF;border-radius:12px">
+                    <MudText Typo="Typo.body2" Style="font-weight:600;color:#7C3AED">★ Competency Assessment Score</MudText>
+                    <MudText Typo="Typo.h4" Style="font-weight:800">@_r.CompetencyScorePercent.ToString("0")%</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Total Competency Weight = 100%</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Final PER calculation -->
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-3">Final PER Calculation</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="pa-4" Outlined="true" Style="background:#EFF6FF">
+                        <MudText Typo="Typo.caption" Color="Color.Primary">Goal Assessment Weight</MudText>
+                        <MudText Typo="Typo.h4" Style="font-weight:800">@_r.GoalWeightPercent.ToString("0")%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_r.GoalScorePercent.ToString("0.0")% × @_r.GoalWeightPercent.ToString("0")%</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="pa-4" Outlined="true" Style="background:#F5F3FF">
+                        <MudText Typo="Typo.caption" Style="color:#7C3AED">Competency Assessment Weight</MudText>
+                        <MudText Typo="Typo.h4" Style="font-weight:800">@_r.CompetencyWeightPercent.ToString("0")%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@_r.CompetencyScorePercent.ToString("0")% × @_r.CompetencyWeightPercent.ToString("0")%</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudPaper Class="pa-4" Style="background:#16A34A;border-radius:10px;color:#fff">
+                        <MudText Typo="Typo.caption" Style="color:#DCFCE7">Final PER Score</MudText>
+                        <MudText Typo="Typo.h4" Style="font-weight:800;color:#fff">@_r.FinalPercent.ToString("0.0")%</MudText>
+                        <MudText Typo="Typo.caption" Style="color:#DCFCE7">@_r.Band</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Goal assessment details -->
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-3">Goal Assessment Details</MudText>
+            @foreach (var g in _r.Goals)
+            {
+                <div class="mb-3">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body1" Style="font-weight:600">@g.Title
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Inline="true">
+                                &nbsp; Weight: @g.WeightPercent.ToString("0")% · Progress: @g.ProgressPercent.ToString("0")% · Rating: @g.Rating/@g.MaxRating
+                            </MudText>
+                        </MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Primary" Style="font-weight:700">@g.ContributionPercent.ToString("0.0#")%</MudText>
+                    </MudStack>
+                    <MudProgressLinear Color="Color.Primary" Value="@((double)g.ContributionPercent)" Rounded="true" Class="mt-1" />
+                </div>
+            }
+            <div class="mt-4">
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_goalSeries" XAxisLabels="@_goalLabels" Width="100%" Height="320px" />
+            </div>
+        </MudPaper>
+
+        <!-- Competency assessment -->
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-3">Competency Assessment</MudText>
+            @foreach (var c in _r.Competencies)
+            {
+                <div class="mb-3">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body1" Style="font-weight:600">@c.Competency</MudText>
+                        <MudText Typo="Typo.body1" Style="font-weight:700;color:#16A34A">@c.Score/@c.MaxScore</MudText>
+                    </MudStack>
+                    <MudProgressLinear Color="Color.Success" Value="@((double)c.Score / c.MaxScore * 100)" Rounded="true" Class="mt-1" />
+                </div>
+            }
+            <div class="mt-4">
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_compSeries" XAxisLabels="@_compLabels" Width="100%" Height="320px" />
+            </div>
+        </MudPaper>
+
+        <!-- Manager remarks -->
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-3">Manager Remarks</MudText>
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.body2" Style="font-weight:700" Class="mb-1">Strengths</MudText>
+                    @foreach (var s in _r.Strengths)
+                    {
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                            <MudText Typo="Typo.body2">@s</MudText>
+                        </MudStack>
+                    }
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.body2" Style="font-weight:700" Class="mb-1">Areas for Development</MudText>
+                    @foreach (var d in _r.DevelopmentAreas)
+                    {
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.Adjust" Color="Color.Warning" Size="Size.Small" />
+                            <MudText Typo="Typo.body2">@d</MudText>
+                        </MudStack>
+                    }
+                </MudItem>
+            </MudGrid>
+
+            @if (!string.IsNullOrWhiteSpace(_r.OverallComments))
+            {
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.body2" Style="font-weight:700" Class="mb-1">Overall Comments</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">@_r.OverallComments</MudText>
+            }
+            <MudStack AlignItems="AlignItems.End" Class="mt-3">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Approved by: <b>@_r.ApprovedBy</b></MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Date: @_r.ApprovedOn?.ToString("dd MMM yyyy")</MudText>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Approval status -->
+        <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-4">Approval Status</MudText>
+            <MudGrid>
+                <MudItem xs="6" md="3"><ApprovalStep Label="Goals Submitted" Date="_r.GoalsSubmittedOn" /></MudItem>
+                <MudItem xs="6" md="3"><ApprovalStep Label="360° Evaluation" Date="_r.Evaluation360On" /></MudItem>
+                <MudItem xs="6" md="3"><ApprovalStep Label="Manager Review" Date="_r.ManagerReviewOn" /></MudItem>
+                <MudItem xs="6" md="3"><ApprovalStep Label="Final Approval" Date="_r.FinalApprovalOn" /></MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center" Class="d-block mb-4">
+            This is a digital preview. Click "Download PDF" to generate a printable professional report.
+        </MudText>
+    </div>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private PerReportDto? _r;
+    private bool _loading = true;
+
+    private List<ChartSeries> _goalSeries = new();
+    private string[] _goalLabels = Array.Empty<string>();
+    private List<ChartSeries> _compSeries = new();
+    private string[] _compLabels = Array.Empty<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var id = await ResolveEmployeeIdAsync();
+        if (id is int eid)
+            _r = await Reports.GetReportAsync(eid);
+
+        if (_r is not null)
+        {
+            _goalLabels = _r.Goals.Select(g => g.Title).ToArray();
+            _goalSeries = new()
+            {
+                new ChartSeries { Name = "Score Contribution (%)", Data = _r.Goals.Select(g => (double)g.ContributionPercent).ToArray() },
+                new ChartSeries { Name = "Goal Weight (%)", Data = _r.Goals.Select(g => (double)g.WeightPercent).ToArray() }
+            };
+
+            _compLabels = _r.Competencies.Select(c => c.Competency).ToArray();
+            _compSeries = new()
+            {
+                new ChartSeries { Name = "Competency Scores", Data = _r.Competencies.Select(c => (double)c.Score).ToArray() }
+            };
+        }
+
+        _loading = false;
+    }
+
+    private async Task DownloadPdf() => await JS.InvokeVoidAsync("window.print");
+
+    private async Task<int?> ResolveEmployeeIdAsync()
+    {
+        if (AuthState is null) return null;
+        var user = (await AuthState).User;
+        return int.TryParse(user.FindFirstValue("employee_id"), out var id) ? id : null;
+    }
+}

@@ -207,6 +207,56 @@ public static class DataSeeder
             });
         }
         await db.SaveChangesAsync();
+
+        // ---- Employee history bands (for PER report's Promotion & Increment box) ----
+        aamir.LastPromotionDate = new DateTime(2024, 1, 1);
+        aamir.LastIncrementDate = new DateTime(2025, 7, 1);
+        aamir.LastIncrementBand = 3;
+        aamir.LastBonusDate = new DateTime(2025, 12, 1);
+        aamir.LastBonusBand = 4;
+        await db.SaveChangesAsync();
+
+        // ---- Finalized PER report snapshot (pre-calculated dummy, matches Figma) ----
+        var report = new PerReport
+        {
+            EvaluationPeriodId = period.Id,
+            EmployeeId = aamir.Id,
+            GoalScorePercent = 80m,
+            CompetencyScorePercent = 60m,
+            GoalWeightPercent = 70m,
+            CompetencyWeightPercent = 30m,
+            FinalPercent = 82.6m,
+            Band = "Excellent",
+            Approved = true,
+            ManagerName = mgr.Name,
+            Strengths = "Exceptional technical expertise and code quality\nStrong leadership in mentoring junior developers\nConsistently delivers projects on time",
+            DevelopmentAreas = "Enhance cross-department communication\nDevelop strategic planning skills for larger initiatives",
+            OverallComments = "Aamir Abdul Aziz has demonstrated outstanding performance throughout Q1 2026. His technical contributions to the React migration project were exceptional, and his dedication to mentoring junior team members has significantly improved team capability. Recommended for promotion consideration.",
+            ApprovedBy = mgr.Name,
+            ApprovedOn = new DateTime(2026, 5, 13),
+            GoalsSubmittedOn = new DateTime(2026, 3, 15),
+            Evaluation360On = new DateTime(2026, 4, 10),
+            ManagerReviewOn = new DateTime(2026, 4, 25),
+            FinalApprovalOn = new DateTime(2026, 5, 13),
+            GoalLines = new List<PerReportGoalLine>
+            {
+                new() { SortOrder = 1, Title = "React Migration",  WeightPercent = 25, ProgressPercent = 50,  Rating = 3, ContributionPercent = 18.75m },
+                new() { SortOrder = 2, Title = "CI/CD Pipeline",   WeightPercent = 20, ProgressPercent = 100, Rating = 4, ContributionPercent = 20m },
+                new() { SortOrder = 3, Title = "Team Mentoring",   WeightPercent = 15, ProgressPercent = 70,  Rating = 3, ContributionPercent = 11.3m },
+                new() { SortOrder = 4, Title = "Code Quality",     WeightPercent = 30, ProgressPercent = 90,  Rating = 3, ContributionPercent = 22.5m },
+                new() { SortOrder = 5, Title = "Documentation",    WeightPercent = 10, ProgressPercent = 80,  Rating = 3, ContributionPercent = 7.5m },
+            },
+            CompetencyLines = new List<PerReportCompetencyLine>
+            {
+                new() { SortOrder = 1, Competency = "Problem-Solving & Innovation", Score = 2 },
+                new() { SortOrder = 2, Competency = "Teamwork & Collaboration",     Score = 2 },
+                new() { SortOrder = 3, Competency = "Integrity",                    Score = 2 },
+                new() { SortOrder = 4, Competency = "Ownership",                    Score = 3 },
+                new() { SortOrder = 5, Competency = "Leadership",                   Score = 3 },
+            }
+        };
+        db.PerReports.Add(report);
+        await db.SaveChangesAsync();
     }
 
     /// <summary>
