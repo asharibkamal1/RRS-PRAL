@@ -55,6 +55,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<PeerEvaluationSnapshot> PeerEvaluationSnapshots => Set<PeerEvaluationSnapshot>();
     public DbSet<PeerEvaluationLine> PeerEvaluationLines => Set<PeerEvaluationLine>();
 
+    // Admin dashboard (dummy snapshot)
+    public DbSet<AdminDashboardStat> AdminDashboardStats => Set<AdminDashboardStat>();
+    public DbSet<AdminDashboardSeriesPoint> AdminDashboardSeriesPoints => Set<AdminDashboardSeriesPoint>();
+    public DbSet<AdminActivity> AdminActivities => Set<AdminActivity>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

@@ -2,44 +2,265 @@
 @attribute [Authorize(Policy = AuthPolicies.AdminArea)]
 @using PralPer.Application.Dashboards
 @inject ICurrentUser CurrentUser
-@inject IDashboardService Dashboard
+@inject IAdminDashboardService Admin
+@inject ISnackbar Snackbar
 
 <PageTitle>Administrator Dashboard · PRAL PER</PageTitle>
 
 <MudText Typo="Typo.h4" Class="mb-1">Administrator Dashboard</MudText>
-<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-5">
-    Good day, @CurrentUser.DisplayName. Here's your performance evaluation overview.
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+    @Greeting, @CurrentUser.DisplayName! Here's your performance evaluation overview.
 </MudText>
 
-@if (_dto is null)
+@if (_data is null)
 {
     <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
 }
 else
 {
+    <!-- KPI cards -->
     <MudGrid>
-        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Total Employees" Value="@_dto.TotalEmployees.ToString()" Icon="@Icons.Material.Filled.Groups" Accent="#2563EB" /></MudItem>
-        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Completed" Value="@_dto.Completed.ToString()" Icon="@Icons.Material.Filled.CheckCircle" Accent="#16A34A" /></MudItem>
-        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Pending" Value="@_dto.Pending.ToString()" Icon="@Icons.Material.Filled.HourglassBottom" Accent="#D97706" /></MudItem>
-        <MudItem xs="12" sm="6" md="3"><KpiCard Title="Not Started" Value="@_dto.NotStarted.ToString()" Icon="@Icons.Material.Filled.RadioButtonUnchecked" Accent="#DC2626" /></MudItem>
+        @foreach (var c in _cards)
+        {
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Class="pa-4" Elevation="1" Style="border-radius:12px;height:100%">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                        <div style="@($"width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{c.Accent}1A;color:{c.Accent}")">
+                            <MudIcon Icon="@c.Icon" />
+                        </div>
+                        @if (c.Trend is decimal t)
+                        {
+                            <MudStack Row="true" Spacing="0" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@(t >= 0 ? Icons.Material.Filled.ArrowUpward : Icons.Material.Filled.ArrowDownward)"
+                                         Size="Size.Small" Style="@($"color:{(t >= 0 ? "#16A34A" : "#DC2626")}")" />
+                                <MudText Typo="Typo.caption" Style="@($"color:{(t >= 0 ? "#16A34A" : "#DC2626")};font-weight:700")">
+                                    @(t >= 0 ? "+" : "")@t.ToString("0")%
+                                </MudText>
+                            </MudStack>
+                        }
+                        else if (c.Badge is not null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">@c.Badge</MudChip>
+                        }
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">@c.Title</MudText>
+                    <MudText Typo="Typo.h4" Style="font-weight:800">@c.Value</MudText>
+                </MudPaper>
+            </MudItem>
+        }
     </MudGrid>
 
-    <MudPaper Class="pa-4 mt-4" Elevation="1">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudIcon Icon="@Icons.Material.Filled.Autorenew" Color="Color.Tertiary" />
-            <MudText Typo="Typo.subtitle1">Active Cycle: <strong>@_dto.ActiveCycleName</strong></MudText>
-        </MudStack>
+    <!-- Manager evaluation table -->
+    <MudPaper Class="pa-2 mt-4" Elevation="1">
+        <div class="adm-head">
+            <span style="width:60px">SR</span>
+            <span style="flex:1">MANAGER NAME</span>
+            <span style="width:140px">DEPARTMENT</span>
+            <span style="width:110px;text-align:center">TEAM SIZE</span>
+            <span style="width:220px">EVALUATION STATUS</span>
+            <span style="width:110px;text-align:center">SEND NUDGE</span>
+        </div>
+        @if (_data.Managers.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-3">No managers with direct reports found.</MudText>
+        }
+        @foreach (var m in _data.Managers)
+        {
+            <div class="adm-row">
+                <span style="width:60px">@m.Sr.</span>
+                <span style="flex:1;font-weight:600">@m.ManagerName</span>
+                <span style="width:140px"><MudChip T="string" Size="Size.Small" Variant="Variant.Text" Style="@DeptStyle(m.Department)">@m.Department</MudChip></span>
+                <span style="width:110px;text-align:center;font-weight:600">@m.TeamSize</span>
+                <span style="width:220px">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">Completed: @m.Completed</MudChip>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Warning">Pending: @m.Pending</MudChip>
+                </span>
+                <span style="width:110px;text-align:center">
+                    <MudTooltip Text="Send evaluation reminder">
+                        <MudIconButton Icon="@Icons.Material.Filled.NotificationsNone" Color="Color.Primary" Size="Size.Small"
+                                       OnClick="@(() => SendNudge(m.ManagerId))" />
+                    </MudTooltip>
+                </span>
+            </div>
+        }
     </MudPaper>
 
-    <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
-        All figures are fetched from the database (pre-calculated). Admin module screens
-        (periods, attributes, designation mapping, assign raters, reports) follow in a later phase.
-    </MudAlert>
+    <!-- Dept progress + timeline -->
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudText Typo="Typo.h6" Class="mb-3">Department-wise Progress</MudText>
+                <MudChart ChartType="ChartType.Bar" ChartSeries="@_deptSeries" XAxisLabels="@_deptLabels"
+                          ChartOptions="@_deptOptions" Width="100%" Height="300px" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudText Typo="Typo.h6" Class="mb-3">Evaluation Timeline</MudText>
+                <MudChart ChartType="ChartType.Line" ChartSeries="@_timelineSeries" XAxisLabels="@_timelineLabels"
+                          ChartOptions="@_lineOptions" Width="100%" Height="300px" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Performance rating distribution -->
+    <MudPaper Class="pa-4 mt-4" Elevation="1">
+        <MudText Typo="Typo.h5" Style="font-weight:700">Performance Rating Distribution</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Employee performance across rating categories</MudText>
+
+        <MudChart ChartType="ChartType.Line" ChartSeries="@_bellSeries" XAxisLabels="@_bellLabels"
+                  ChartOptions="@_lineOptions" Width="100%" Height="340px" />
+
+        <MudGrid Class="mt-2">
+            @foreach (var r in _data.Rating)
+            {
+                var color = RatingColor(r.Score);
+                <MudItem xs="6" md="2">
+                    <MudPaper Class="pa-3" Elevation="0" Style="@($"border-top:4px solid {color};border-radius:8px;text-align:center;background:#F8FAFC")">
+                        <MudText Typo="Typo.h5" Style="font-weight:800">@r.Score</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@r.Label</MudText>
+                        <MudText Typo="Typo.h6" Style="@($"color:{color};font-weight:800")">@r.Percent.ToString("0")%</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">of employees</MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+
+        <MudDivider Class="my-3" />
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Primary" />
+                    <div><MudText Typo="Typo.caption" Color="Color.Secondary">Total Categories</MudText><MudText Typo="Typo.subtitle1" Style="font-weight:700">@_data.Rating.Count</MudText></div>
+                </MudStack>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.Star" Style="color:#D97706" />
+                    <div><MudText Typo="Typo.caption" Color="Color.Secondary">Peak Performance</MudText><MudText Typo="Typo.subtitle1" Style="font-weight:700">@PeakLabel</MudText></div>
+                </MudStack>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.BarChart" Color="Color.Success" />
+                    <div><MudText Typo="Typo.caption" Color="Color.Secondary">Distribution Model</MudText><MudText Typo="Typo.subtitle1" Style="font-weight:700">Bell Curve</MudText></div>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Status distribution + recent activity -->
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" md="5">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudText Typo="Typo.h6" Class="mb-3">Status Distribution</MudText>
+                <div class="d-flex justify-center">
+                    <MudChart ChartType="ChartType.Pie" InputData="@_statusData" InputLabels="@_statusLabels"
+                              ChartOptions="@_statusOptions" Width="280px" Height="280px" />
+                </div>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="7">
+            <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+                <MudText Typo="Typo.h6" Class="mb-3">Recent Activity</MudText>
+                @foreach (var a in _data.Activity)
+                {
+                    <div class="adm-activity">
+                        <MudIcon Icon="@Icons.Material.Filled.FiberManualRecord" Style="color:#3B82F6;font-size:12px" Class="mt-1" />
+                        <div style="flex:1">
+                            <MudText Typo="Typo.body2" Style="font-weight:600">@a.ActorName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@a.Description</MudText>
+                        </div>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@a.AgoText</MudText>
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
 }
 
+<style>
+    .adm-head { display:flex; align-items:center; padding:12px 16px; font-size:.72rem; font-weight:600; color:#64748B; text-transform:uppercase; border-bottom:1px solid #E2E8F0; }
+    .adm-row { display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid #F1F5F9; }
+    .adm-activity { display:flex; align-items:flex-start; gap:10px; padding:12px 4px; border-bottom:1px solid #F1F5F9; }
+</style>
+
 @code {
-    private AdminDashboardDto? _dto;
+    private AdminDashboardData? _data;
+
+    private List<ChartSeries> _deptSeries = new();
+    private string[] _deptLabels = Array.Empty<string>();
+    private List<ChartSeries> _timelineSeries = new();
+    private string[] _timelineLabels = Array.Empty<string>();
+    private List<ChartSeries> _bellSeries = new();
+    private string[] _bellLabels = Array.Empty<string>();
+    private double[] _statusData = Array.Empty<double>();
+    private string[] _statusLabels = Array.Empty<string>();
+
+    private readonly ChartOptions _deptOptions = new() { ChartPalette = new[] { "#16A34A", "#F59E0B" } };
+    private readonly ChartOptions _lineOptions = new() { ChartPalette = new[] { "#3B82F6", "#16A34A" }, InterpolationOption = InterpolationOption.NaturalSpline };
+    private readonly ChartOptions _statusOptions = new() { ChartPalette = new[] { "#16A34A", "#DC2626", "#F59E0B" } };
+
+    private string Greeting => DateTime.Now.Hour switch { < 12 => "Good morning", < 17 => "Good afternoon", _ => "Good evening" };
+
+    private string PeakLabel
+    {
+        get
+        {
+            if (_data is null || _data.Rating.Count == 0) return "—";
+            var peak = _data.Rating.MaxBy(r => r.Percent)!;
+            return $"{peak.Label} ({peak.Score})";
+        }
+    }
 
     protected override async Task OnInitializedAsync()
-        => _dto = await Dashboard.GetAdminDashboardAsync();
+    {
+        _data = await Admin.GetAsync();
+
+        _cards = new()
+        {
+            new("Total Employees", _data.Kpi.TotalEmployees.ToString("N0"), "#2563EB", Icons.Material.Filled.Groups, _data.Kpi.EmployeesTrend, null),
+            new("Evaluations Pending", _data.Kpi.EvaluationsPending.ToString("N0"), "#EA580C", Icons.Material.Filled.Schedule, _data.Kpi.PendingTrend, null),
+            new("Completed Reviews", _data.Kpi.CompletedReviews.ToString("N0"), "#16A34A", Icons.Material.Filled.FactCheck, _data.Kpi.CompletedTrend, null),
+            new("Active Cycle", _data.Kpi.ActiveCycleName, "#7C3AED", Icons.Material.Filled.Insights, null, $"{_data.Kpi.ActiveCyclePercent:0}% Complete"),
+        };
+
+        _deptLabels = _data.DeptProgress.Select(d => d.Department).ToArray();
+        _deptSeries = new()
+        {
+            new ChartSeries { Name = "Completed", Data = _data.DeptProgress.Select(d => (double)d.Completed).ToArray() },
+            new ChartSeries { Name = "Pending", Data = _data.DeptProgress.Select(d => (double)d.Pending).ToArray() }
+        };
+
+        _timelineLabels = _data.Timeline.Select(t => t.Label).ToArray();
+        _timelineSeries = new() { new ChartSeries { Name = "Evaluations", Data = _data.Timeline.Select(t => t.Value).ToArray() } };
+
+        _bellLabels = _data.Rating.Select(r => r.Score.ToString()).ToArray();
+        _bellSeries = new() { new ChartSeries { Name = "Employees (%)", Data = _data.Rating.Select(r => (double)r.Percent).ToArray() } };
+
+        _statusData = new[] { (double)_data.Status.CompletedPercent, (double)_data.Status.NotStartedPercent, (double)_data.Status.InProgressPercent };
+        _statusLabels = new[] { "Completed", "Not Started", "In Progress" };
+    }
+
+    private async Task SendNudge(int managerId)
+    {
+        var name = await Admin.SendNudgeAsync(managerId);
+        Snackbar.Add(name is null ? "Could not send reminder." : $"Reminder sent to {name}.",
+            name is null ? Severity.Error : Severity.Success);
+    }
+
+    private sealed record KpiCardVm(string Title, string Value, string Accent, string Icon, decimal? Trend, string? Badge);
+    private List<KpiCardVm> _cards = new();
+
+    private static string RatingColor(int score) => score switch
+    {
+        0 => "#DC2626", 1 => "#EA580C", 2 => "#D97706", 3 => "#16A34A", _ => "#15803D"
+    };
+
+    private static readonly string[] DeptColors = { "#7C3AED", "#2563EB", "#0EA5E9", "#DC2626", "#16A34A", "#DB2777", "#D97706" };
+    private static string DeptStyle(string dept)
+    {
+        var color = DeptColors[(dept.GetHashCode() & int.MaxValue) % DeptColors.Length];
+        return $"background:{color}1A;color:{color}";
+    }
 }
