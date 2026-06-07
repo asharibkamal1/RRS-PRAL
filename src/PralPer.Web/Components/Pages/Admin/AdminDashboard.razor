@@ -97,8 +97,15 @@ else
         <MudItem xs="12" md="6">
             <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
                 <MudText Typo="Typo.h6" Class="mb-3">Evaluation Timeline</MudText>
-                <MudChart ChartType="ChartType.Line" ChartSeries="@_timelineSeries" XAxisLabels="@_timelineLabels"
-                          ChartOptions="@_lineOptions" Width="100%" Height="300px" />
+                @if (_timelineLabels.Length >= 2)
+                {
+                    <MudChart ChartType="ChartType.Line" ChartSeries="@_timelineSeries" XAxisLabels="@_timelineLabels"
+                              ChartOptions="@_timelineOptions" Width="100%" Height="300px" />
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Not enough data to plot a timeline.</MudText>
+                }
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -108,8 +115,11 @@ else
         <MudText Typo="Typo.h5" Style="font-weight:700">Performance Rating Distribution</MudText>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Employee performance across rating categories</MudText>
 
-        <MudChart ChartType="ChartType.Line" ChartSeries="@_bellSeries" XAxisLabels="@_bellLabels"
-                  ChartOptions="@_lineOptions" Width="100%" Height="340px" />
+        @if (_bellLabels.Length >= 2)
+        {
+            <MudChart ChartType="ChartType.Line" ChartSeries="@_bellSeries" XAxisLabels="@_bellLabels"
+                      ChartOptions="@_bellOptions" Width="100%" Height="340px" />
+        }
 
         <MudGrid Class="mt-2">
             @foreach (var r in _data.Rating)
@@ -198,7 +208,9 @@ else
     private string[] _statusLabels = Array.Empty<string>();
 
     private readonly ChartOptions _deptOptions = new() { ChartPalette = new[] { "#16A34A", "#F59E0B" } };
-    private readonly ChartOptions _lineOptions = new() { ChartPalette = new[] { "#3B82F6", "#16A34A" }, InterpolationOption = InterpolationOption.NaturalSpline };
+    // NaturalSpline needs >= 4 points; fall back to straight lines for smaller series.
+    private readonly ChartOptions _bellOptions = new() { ChartPalette = new[] { "#3B82F6" }, InterpolationOption = InterpolationOption.NaturalSpline };
+    private ChartOptions _timelineOptions = new() { ChartPalette = new[] { "#3B82F6" } };
     private readonly ChartOptions _statusOptions = new() { ChartPalette = new[] { "#16A34A", "#DC2626", "#F59E0B" } };
 
     private string Greeting => DateTime.Now.Hour switch { < 12 => "Good morning", < 17 => "Good afternoon", _ => "Good evening" };
@@ -234,6 +246,11 @@ else
 
         _timelineLabels = _data.Timeline.Select(t => t.Label).ToArray();
         _timelineSeries = new() { new ChartSeries { Name = "Evaluations", Data = _data.Timeline.Select(t => t.Value).ToArray() } };
+        _timelineOptions = new ChartOptions
+        {
+            ChartPalette = new[] { "#3B82F6" },
+            InterpolationOption = _timelineLabels.Length >= 4 ? InterpolationOption.NaturalSpline : InterpolationOption.Straight
+        };
 
         _bellLabels = _data.Rating.Select(r => r.Score.ToString()).ToArray();
         _bellSeries = new() { new ChartSeries { Name = "Employees (%)", Data = _data.Rating.Select(r => (double)r.Percent).ToArray() } };
