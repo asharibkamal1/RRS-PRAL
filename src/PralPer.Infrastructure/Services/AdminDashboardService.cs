@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using PralPer.Application.Dashboards;
 using PralPer.Application.Services;
 using PralPer.Domain.Enums;
+using PralPer.Domain.Scoring;
 using PralPer.Infrastructure.Persistence;
 
 namespace PralPer.Infrastructure.Services;
@@ -77,7 +78,7 @@ public sealed class AdminDashboardService : IAdminDashboardService
 
         // ---- Performance rating distribution (bucket FinalPercent 0-4) ----
         var buckets = new int[5];
-        foreach (var r in reports) buckets[Bucket(r.FinalPercent)]++;
+        foreach (var r in reports) buckets[PerScale.Bucket(r.FinalPercent)]++;
         var n = reports.Count;
         var rating = RatingLabels
             .Select(rl => new AdminRatingBucketDto(rl.Score, rl.Label, n > 0 ? Math.Round(buckets[rl.Score] * 100m / n, 0) : 0))
@@ -102,11 +103,6 @@ public sealed class AdminDashboardService : IAdminDashboardService
 
         return new AdminDashboardData(kpi, managers, deptProgress, timeline, rating, status, activity);
     }
-
-    private static int Bucket(decimal final) => final switch
-    {
-        >= 90 => 4, >= 80 => 3, >= 60 => 2, >= 40 => 1, _ => 0
-    };
 
     private async Task<IReadOnlyList<AdminManagerRowDto>> BuildManagerTableAsync(
         int periodId, HashSet<int> approvedSet, CancellationToken ct)
@@ -168,18 +164,10 @@ public sealed class AdminDashboardService : IAdminDashboardService
         var names = await _db.Employees.AsNoTracking()
             .Where(e => ids.Contains(e.Id)).ToDictionaryAsync(e => e.Id, e => e.Name, ct);
 
+        var now = DateTime.UtcNow;
         return top
-            .Select(e => new AdminActivityDto(names.GetValueOrDefault(e.EmpId, "Employee"), e.Desc, Ago(e.When)))
+            .Select(e => new AdminActivityDto(names.GetValueOrDefault(e.EmpId, "Employee"), e.Desc, PerScale.RelativeTime(e.When, now)))
             .ToList();
-    }
-
-    private static string Ago(DateTime utc)
-    {
-        var span = DateTime.UtcNow - utc;
-        if (span.TotalMinutes < 1) return "just now";
-        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes} minutes ago";
-        if (span.TotalHours < 24) return $"{(int)span.TotalHours} hours ago";
-        return $"{(int)span.TotalDays} days ago";
     }
 
     public async Task<string?> SendNudgeAsync(int managerEmployeeId, CancellationToken ct = default)
