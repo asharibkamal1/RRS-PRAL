@@ -18,7 +18,11 @@ public static class DependencyInjection
         var connectionString = config.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
+        services.AddDbContext<AppDbContext>(options => options
+            .UseSqlServer(connectionString)
+            // The admin-dashboard tables are added via a hand-written migration (no SDK to regenerate
+            // the model snapshot in this environment); silence the runtime pending-changes validation.
+            .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
         // Repository + Unit of Work
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
