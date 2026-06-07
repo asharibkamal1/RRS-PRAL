@@ -207,17 +207,35 @@ public static class DataSeeder
             });
         }
         await db.SaveChangesAsync();
+    }
 
-        // ---- Employee history bands (for PER report's Promotion & Increment box) ----
+    /// <summary>
+    /// Seeds the finalized PER report (and history bands) for the demo employee. Idempotent —
+    /// runs on every startup but skips if a report already exists, so it populates an existing
+    /// DB after the PerReport migration without a drop/reseed.
+    /// </summary>
+    public static async Task SeedPerReportAsync(AppDbContext db)
+    {
+        if (await db.PerReports.AnyAsync()) return;
+
+        var period = await db.EvaluationPeriods.FirstOrDefaultAsync(p => p.Status == PeriodStatus.Active);
+        if (period is null) return;
+
+        var aamir = await db.Employees.FirstOrDefaultAsync(e => e.WorkEmail == "employee@pral.com.pk");
+        if (aamir is null) return;
+
+        var mgr = await db.Employees.FirstOrDefaultAsync(e => e.Id == aamir.ReportingManagerId)
+                  ?? await db.Employees.FirstOrDefaultAsync(e => e.WorkEmail == "manager@pral.com.pk");
+        var mgrName = mgr?.Name ?? "Abdul Hafeez Butt";
+
+        // History bands for the report's Promotion & Increment box
         aamir.LastPromotionDate = new DateTime(2024, 1, 1);
         aamir.LastIncrementDate = new DateTime(2025, 7, 1);
         aamir.LastIncrementBand = 3;
         aamir.LastBonusDate = new DateTime(2025, 12, 1);
         aamir.LastBonusBand = 4;
-        await db.SaveChangesAsync();
 
-        // ---- Finalized PER report snapshot (pre-calculated dummy, matches Figma) ----
-        var report = new PerReport
+        db.PerReports.Add(new PerReport
         {
             EvaluationPeriodId = period.Id,
             EmployeeId = aamir.Id,
@@ -228,11 +246,11 @@ public static class DataSeeder
             FinalPercent = 82.6m,
             Band = "Excellent",
             Approved = true,
-            ManagerName = mgr.Name,
+            ManagerName = mgrName,
             Strengths = "Exceptional technical expertise and code quality\nStrong leadership in mentoring junior developers\nConsistently delivers projects on time",
             DevelopmentAreas = "Enhance cross-department communication\nDevelop strategic planning skills for larger initiatives",
             OverallComments = "Aamir Abdul Aziz has demonstrated outstanding performance throughout Q1 2026. His technical contributions to the React migration project were exceptional, and his dedication to mentoring junior team members has significantly improved team capability. Recommended for promotion consideration.",
-            ApprovedBy = mgr.Name,
+            ApprovedBy = mgrName,
             ApprovedOn = new DateTime(2026, 5, 13),
             GoalsSubmittedOn = new DateTime(2026, 3, 15),
             Evaluation360On = new DateTime(2026, 4, 10),
@@ -254,8 +272,7 @@ public static class DataSeeder
                 new() { SortOrder = 4, Competency = "Ownership",                    Score = 3 },
                 new() { SortOrder = 5, Competency = "Leadership",                   Score = 3 },
             }
-        };
-        db.PerReports.Add(report);
+        });
         await db.SaveChangesAsync();
     }
 

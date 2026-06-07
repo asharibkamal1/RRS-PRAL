@@ -17,6 +17,7 @@ public static class DbInitializer
 
         await DataSeeder.SeedAsync(db);                 // reference + sample data (fresh DB only)
         await DataSeeder.SeedProfileHistoryAsync(db);   // profile history for all employees (idempotent)
+        await DataSeeder.SeedPerReportAsync(db);        // finalized PER report (idempotent)
         await IdentitySeeder.SeedAsync(sp);             // roles + demo users linked to those employees
     }
 }
