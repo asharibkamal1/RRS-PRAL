@@ -47,6 +47,14 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<PerReportGoalLine> PerReportGoalLines => Set<PerReportGoalLine>();
     public DbSet<PerReportCompetencyLine> PerReportCompetencyLines => Set<PerReportCompetencyLine>();
 
+    // Manager dashboard (dummy snapshot)
+    public DbSet<ManagerDashboardStat> ManagerDashboardStats => Set<ManagerDashboardStat>();
+    public DbSet<DeptPerformance> DeptPerformances => Set<DeptPerformance>();
+    public DbSet<ManagerApproval> ManagerApprovals => Set<ManagerApproval>();
+    public DbSet<ManagerRater> ManagerRaters => Set<ManagerRater>();
+    public DbSet<PeerEvaluationSnapshot> PeerEvaluationSnapshots => Set<PeerEvaluationSnapshot>();
+    public DbSet<PeerEvaluationLine> PeerEvaluationLines => Set<PeerEvaluationLine>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
