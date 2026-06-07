@@ -101,9 +101,9 @@ else
                 <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Style="@LevelStyle(m.Level)">@m.Level</MudChip>
             </MudTd>
             <MudTd DataLabel="Weightage" Style="text-align:center">
-                <MudNumericField T="decimal" Value="m.Weight" Min="0" Max="100" Variant="Variant.Outlined"
-                                 Margin="Margin.Dense" Style="max-width:90px;margin:0 auto"
-                                 ValueChanged="@(v => UpdateWeight(m, v))" />
+                <MudNumericField T="decimal" @bind-Value="m.Weight" @bind-Value:after="@(() => OnWeightChanged(m))"
+                                 Min="0" Max="100" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Style="max-width:90px;margin:0 auto" />
             </MudTd>
             <MudTd DataLabel="Actions" Style="text-align:center">
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
@@ -126,13 +126,23 @@ else
     private bool _saving;
     private IReadOnlyList<CompetencyOption> _competencies = Array.Empty<CompetencyOption>();
     private IReadOnlyList<LevelOption> _levels = Array.Empty<LevelOption>();
-    private List<LevelMapRow> _maps = new();
-    private IReadOnlyList<CompetencyWeightDto> _summary = Array.Empty<CompetencyWeightDto>();
+    private List<MapRow> _maps = new();
+    private List<CompetencyWeightDto> _summary = new();
 
     private int _competencyId;
     private string _attributeName = string.Empty;
     private int _levelId;
     private decimal _weight;
+
+    /// <summary>Mutable row bound by the editable weight field (records are immutable).</summary>
+    private sealed class MapRow
+    {
+        public int Id { get; set; }
+        public string Competency { get; set; } = string.Empty;
+        public string Attribute { get; set; } = string.Empty;
+        public string Level { get; set; } = string.Empty;
+        public decimal Weight { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -144,9 +154,19 @@ else
 
     private async Task Reload()
     {
-        _maps = (await Catalog.GetLevelMapsAsync()).ToList();
-        _summary = await Catalog.GetLevelWeightSummaryAsync();
+        _maps = (await Catalog.GetLevelMapsAsync())
+            .Select(m => new MapRow { Id = m.Id, Competency = m.Competency, Attribute = m.Attribute, Level = m.Level, Weight = m.Weight })
+            .ToList();
+        RecalcSummary();
     }
+
+    // Recompute the per-competency totals in memory so edits update instantly without a list reload.
+    private void RecalcSummary()
+        => _summary = _maps
+            .GroupBy(m => m.Competency)
+            .Select(g => new CompetencyWeightDto(g.Key, g.Sum(m => m.Weight)))
+            .OrderBy(x => x.Competency)
+            .ToList();
 
     private async Task Save()
     {
@@ -170,14 +190,16 @@ else
         _weight = 0;
     }
 
-    private async Task UpdateWeight(LevelMapRow m, decimal value)
+    // Persist the edited weight and refresh the summary locally — no list reload, so the
+    // numeric field is not disposed while its JS interop is still completing.
+    private async Task OnWeightChanged(MapRow m)
     {
-        var res = await Catalog.UpdateLevelMapWeightAsync(m.Id, value);
-        if (res.Succeeded) await Reload();
-        else Snackbar.Add(res.Error ?? "Could not update weight.", Severity.Error);
+        RecalcSummary();
+        var res = await Catalog.UpdateLevelMapWeightAsync(m.Id, m.Weight);
+        if (!res.Succeeded) Snackbar.Add(res.Error ?? "Could not update weight.", Severity.Error);
     }
 
-    private async Task DeleteMap(LevelMapRow m)
+    private async Task DeleteMap(MapRow m)
     {
         var res = await Catalog.DeleteLevelMapAsync(m.Id);
         if (res.Succeeded) { Snackbar.Add("Mapping removed.", Severity.Success); await Reload(); }
