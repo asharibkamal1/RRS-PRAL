@@ -213,7 +213,7 @@ else
     private ChartOptions _timelineOptions = new() { ChartPalette = new[] { "#3B82F6" } };
     private readonly ChartOptions _statusOptions = new() { ChartPalette = new[] { "#16A34A", "#DC2626", "#F59E0B" } };
 
-    private string Greeting => DateTime.Now.Hour switch { < 12 => "Good morning", < 17 => "Good afternoon", _ => "Good evening" };
+    private string Greeting => DateTime.Now.Hour switch { >= 17 => "Good evening", >= 12 => "Good afternoon", _ => "Good morning" };
 
     private string PeakLabel
     {

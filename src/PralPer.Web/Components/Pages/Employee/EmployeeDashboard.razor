@@ -97,9 +97,9 @@ else
 
     private string Greeting => DateTime.Now.Hour switch
     {
-        < 12 => "Good morning",
-        < 17 => "Good afternoon",
-        _ => "Good evening"
+        >= 17 => "Good evening",
+        >= 12 => "Good afternoon",
+        _ => "Good morning"
     };
 
     protected override async Task OnInitializedAsync()
