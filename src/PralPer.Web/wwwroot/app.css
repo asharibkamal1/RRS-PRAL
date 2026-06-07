@@ -19,6 +19,10 @@ html, body {
     font-size: 14px;
 }
 
+/* System flow bullets */
+.flow-bullets { margin: 4px 0 0; padding-left: 18px; color: #475569; font-size: 13px; }
+.flow-bullets li { margin-bottom: 2px; }
+
 /* 360 ratee list */
 .ratee-head {
     display: flex; align-items: center; gap: 8px;

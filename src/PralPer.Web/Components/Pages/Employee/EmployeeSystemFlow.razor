@@ -1,0 +1,171 @@
+@page "/employee/system-flow"
+@attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+
+<PageTitle>System Flow · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">System Flow Diagram</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-5">Complete workflow and screen navigation map</MudText>
+
+<!-- Workflow -->
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6" Class="mb-4">PER System Workflow</MudText>
+    @foreach (var step in _steps)
+    {
+        <MudPaper Class="pa-3 mb-3" Outlined="true">
+            <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Start">
+                <div style="@($"min-width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{step.Color}1A;color:{step.Color}")">
+                    <MudIcon Icon="@step.Icon" />
+                </div>
+                <div style="flex:1">
+                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                        <MudChip T="string" Size="Size.Small" Style="@($"background:{step.Color}1A;color:{step.Color}")">Step @step.No</MudChip>
+                        <MudText Typo="Typo.subtitle1" Style="font-weight:700">@step.Title</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">@step.Description</MudText>
+                    <ul class="flow-bullets">
+                        @foreach (var b in step.Bullets)
+                        {
+                            <li>@b</li>
+                        }
+                    </ul>
+                </div>
+            </MudStack>
+        </MudPaper>
+    }
+</MudPaper>
+
+<!-- Screen navigation map -->
+<MudPaper Class="pa-4 mb-4" Elevation="1">
+    <MudText Typo="Typo.h6" Class="mb-3">Screen Navigation Map</MudText>
+    <MudGrid>
+        @foreach (var nav in _navMap)
+        {
+            <MudItem xs="12" sm="6" md="4">
+                <MudPaper Class="pa-3" Outlined="true">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudIcon Icon="@nav.Icon" Color="Color.Primary" />
+                        <div>
+                            <MudText Typo="Typo.body2" Style="font-weight:600">@nav.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@nav.Route</MudText>
+                        </div>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+<MudGrid>
+    <!-- User roles -->
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+            <MudText Typo="Typo.h6" Class="mb-3">User Roles</MudText>
+            <RoleLine Name="Admin" Desc="Full system access" Color="#DC2626" />
+            <RoleLine Name="Manager" Desc="Review & approve PERs" Color="#2563EB" />
+            <RoleLine Name="Employee" Desc="Submit goals & view reports" Color="#16A34A" />
+            <RoleLine Name="Peer Rator" Desc="360° evaluations" Color="#7C3AED" />
+        </MudPaper>
+    </MudItem>
+
+    <!-- Scoring formula -->
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+            <MudText Typo="Typo.h6" Class="mb-3">Scoring Formula</MudText>
+            <MudPaper Class="pa-2 mb-2" Outlined="true" Style="background:#EFF6FF">
+                <MudText Typo="Typo.body2" Style="font-weight:600">Goal Score (70%)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Σ (Goal Weight × Manager Rating)</MudText>
+            </MudPaper>
+            <MudPaper Class="pa-2 mb-2" Outlined="true" Style="background:#F5F3FF">
+                <MudText Typo="Typo.body2" Style="font-weight:600">Peer Score (30%)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">(Sum of peer attribute ratings) ÷ count</MudText>
+            </MudPaper>
+            <MudPaper Class="pa-2 mb-2" Outlined="true" Style="background:#F0FDF4">
+                <MudText Typo="Typo.body2" Style="font-weight:600">Final PER Score</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">(Goal × 0.70) + (Peer × 0.30)</MudText>
+            </MudPaper>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Colour: ≥ 80% green · ≥ 60% amber · &lt; 60% red</MudText>
+        </MudPaper>
+    </MudItem>
+
+    <!-- HRMS integration -->
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+            <MudText Typo="Typo.h6" Class="mb-3">HRMS Integration</MudText>
+            @foreach (var item in _hrms)
+            {
+                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Class="mb-1">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+                    <MudText Typo="Typo.body2">@item</MudText>
+                </MudStack>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<!-- Timeline -->
+<MudPaper Class="pa-4 mt-4" Elevation="0" Style="background:linear-gradient(90deg,#2563EB,#7C3AED);border-radius:14px;color:#fff">
+    <MudText Typo="Typo.h6" Style="color:#fff" Class="mb-3">Typical Evaluation Cycle Timeline</MudText>
+    <MudGrid>
+        @foreach (var t in _timeline)
+        {
+            <MudItem xs="6" md="3">
+                <MudPaper Class="pa-3" Style="background:rgba(255,255,255,.15);border-radius:10px;color:#fff;height:100%">
+                    <MudText Typo="Typo.subtitle2" Style="color:#fff;font-weight:700">@t.week</MudText>
+                    <MudText Typo="Typo.caption" Style="color:#E0E7FF">@t.label</MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+</MudPaper>
+
+@code {
+    private record Step(int No, string Title, string Description, string Color, string Icon, string[] Bullets);
+    private record Nav(string Name, string Route, string Icon);
+
+    private readonly Step[] _steps =
+    {
+        new(1, "Admin Configuration", "System setup and initialization", "#2563EB", Icons.Material.Filled.Settings,
+            new[] { "Create evaluation cycle", "Define timeline", "Set weights (Goals: 70%, Peer: 30%)" }),
+        new(2, "Attribute Setup", "Define competency attributes", "#7C3AED", Icons.Material.Filled.Tune,
+            new[] { "Create attributes", "Assign categories", "Set weights" }),
+        new(3, "Designation Mapping", "Map attributes to job roles", "#4F46E5", Icons.Material.Filled.Map,
+            new[] { "Select designation", "Assign competencies", "Validate mapping" }),
+        new(4, "Assign Rators", "Configure peer reviewers", "#0D9488", Icons.Material.Filled.People,
+            new[] { "Select employees", "Assign peer rators", "Configure 360° workflow" }),
+        new(5, "Goal Submission", "Employees submit goals", "#16A34A", Icons.Material.Filled.TrackChanges,
+            new[] { "Define 3–5 goals", "Assign weights (total 100%)", "Track progress" }),
+        new(6, "360° Evaluation", "Peer competency rating", "#65A30D", Icons.Material.Filled.Star,
+            new[] { "Rate competencies", "Use rating scale", "Calculate peer score (30%)" }),
+        new(7, "PER Calculation", "Compute final scores", "#D97706", Icons.Material.Filled.Calculate,
+            new[] { "Goal Score: 70%", "Peer Score: 30%", "Final PER = Goal + Peer" }),
+        new(8, "Approval by Manager", "Manager review and approval", "#EA580C", Icons.Material.Filled.RateReview,
+            new[] { "Manager review", "Add remarks", "Forwards PER to HoD" }),
+        new(9, "Final Approval", "Final approval lies with HoD", "#DC2626", Icons.Material.Filled.Flag,
+            new[] { "HoD review", "Add remarks", "Approve PER" }),
+    };
+
+    private readonly Nav[] _navMap =
+    {
+        new("Login", "/", Icons.Material.Filled.Login),
+        new("Dashboard", "/employee/dashboard", Icons.Material.Filled.Dashboard),
+        new("Employee Profile", "/employee/profile", Icons.Material.Filled.Person),
+        new("Goal Submission", "/employee/goals", Icons.Material.Filled.TrackChanges),
+        new("360° Evaluation", "/employee/competency", Icons.Material.Filled.Star),
+        new("PER Report", "/employee/my-evaluations", Icons.Material.Filled.Assessment),
+    };
+
+    private readonly string[] _hrms =
+    {
+        "Employee Master Data", "Organizational Structure", "Designation Hierarchy",
+        "Reporting Relationships", "Salary & Increment Data", "Promotion History",
+        "Recruitment Records", "Bonus Allocations"
+    };
+
+    private readonly (string week, string label)[] _timeline =
+    {
+        ("Week 1-2", "Admin Setup & Goal Submission"),
+        ("Week 3-4", "360° Peer Evaluations"),
+        ("Week 5-6", "Manager Reviews & Ratings"),
+        ("Week 7-8", "Final Approval & Reports"),
+    };
+}
