@@ -27,12 +27,10 @@
                 <span style="width:120px">STATUS</span>
                 <span style="width:90px;text-align:center">ACTION</span>
             </div>
-            @{ var sr = 0; }
-            @foreach (var r in _dto.Ratees)
+            @foreach (var (r, idx) in _dto.Ratees.Select((x, i) => (x, i)))
             {
-                sr++;
                 <div class="ratee-row">
-                    <span style="width:40px">@(sr).</span>
+                    <span style="width:40px">@(idx + 1).</span>
                     <span style="flex:1;font-weight:600">@r.RateeName</span>
                     <span style="width:120px"><MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Tertiary">@r.Department</MudChip></span>
                     <span style="width:120px"><MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(r.Status == "Completed" ? Color.Success : Color.Warning)">@r.Status</MudChip></span>
@@ -56,7 +54,7 @@
     private async Task OpenDetail(int snapshotId)
     {
         var parameters = new DialogParameters<PeerEvaluationDetailDialog> { { x => x.SnapshotId, snapshotId } };
-        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true, Scrollable = true };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true, CloseButton = true };
         await DialogService.ShowAsync<PeerEvaluationDetailDialog>("360° Competency Rating", parameters, options);
     }
 }

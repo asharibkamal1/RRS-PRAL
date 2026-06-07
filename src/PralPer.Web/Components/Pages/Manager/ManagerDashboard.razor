@@ -70,12 +70,10 @@ else
             <span style="width:200px">EVALUATION STATUS</span>
             <span style="width:80px;text-align:center">ACTION</span>
         </div>
-        @{ var sr = 0; }
-        @foreach (var r in _dto.Raters)
+        @foreach (var (r, idx) in _dto.Raters.Select((x, i) => (x, i)))
         {
-            sr++;
             <div class="ratee-row">
-                <span style="width:40px">@(sr).</span>
+                <span style="width:40px">@(idx + 1).</span>
                 <span style="flex:1;font-weight:600">@r.Name</span>
                 <span style="width:120px">
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"

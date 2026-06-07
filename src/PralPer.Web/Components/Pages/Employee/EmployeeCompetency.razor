@@ -86,13 +86,11 @@ else
             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="py-3">No ratees assigned to this rater.</MudText>
         }
 
-        @{ var sr = 0; }
-        @foreach (var ratee in _ratees)
+        @foreach (var (ratee, idx) in _ratees.Select((x, i) => (x, i)))
         {
-            sr++;
             var isOpen = _expandedRateeId == ratee.EmployeeId;
             <div class="ratee-row @(isOpen ? "open" : "")">
-                <span style="width:40px">@(sr).</span>
+                <span style="width:40px">@(idx + 1).</span>
                 <span style="flex:1;font-weight:600">@ratee.Name</span>
                 <span style="width:160px">
                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
