@@ -1,0 +1,35 @@
+@page "/admin/profile"
+@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Profiles
+@inject IProfileService ProfileService
+@inject ICurrentUser CurrentUser
+
+<PageTitle>My Profile · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Employee Profile</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-5">Auto-fetched HRMS data and complete employee information</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_dto is null)
+{
+    <MudAlert Severity="Severity.Warning">No employee record is linked to your account.</MudAlert>
+}
+else
+{
+    <ProfileView Dto="_dto" />
+}
+
+@code {
+    private EmployeeProfileDto? _dto;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CurrentUser.EmployeeId is int id)
+            _dto = await ProfileService.GetProfileAsync(id);
+        _loading = false;
+    }
+}
