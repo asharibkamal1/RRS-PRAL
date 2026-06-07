@@ -115,7 +115,7 @@ public static class CompetencyCatalogSeeder
             if (!await db.Attributes.AnyAsync(a => a.CompetencyId == compId && a.Name == attrName))
                 db.Attributes.Add(new AttributeItem
                 {
-                    CompetencyId = compId, Name = attrName, Description = desc, Weight = weight, IsActive = active
+                    CompetencyId = compId, Name = attrName, Description = desc, Weight = weight / 100m, IsActive = active
                 });
         }
         await db.SaveChangesAsync();
@@ -134,7 +134,7 @@ public static class CompetencyCatalogSeeder
             if (!await db.DesignationAttributeMaps.AnyAsync(m => m.DesignationId == levelId && m.AttributeId == attrId))
                 db.DesignationAttributeMaps.Add(new DesignationAttributeMap
                 {
-                    DesignationId = levelId, AttributeId = attrId, Weight = weight
+                    DesignationId = levelId, AttributeId = attrId, Weight = weight / 100m
                 });
         }
         await db.SaveChangesAsync();

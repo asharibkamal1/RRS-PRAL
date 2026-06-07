@@ -52,7 +52,7 @@ public sealed class CatalogAdminService : ICatalogAdminService
         return await q
             .OrderBy(a => a.Competency!.Name).ThenBy(a => a.Name)
             .Select(a => new AttributeAdminRow(
-                a.Id, a.CompetencyId, a.Competency!.Name, a.Name, a.Description, a.Weight, a.IsActive))
+                a.Id, a.CompetencyId, a.Competency!.Name, a.Name, a.Description, a.Weight * 100m, a.IsActive))
             .ToListAsync(ct);
     }
 
@@ -71,7 +71,7 @@ public sealed class CatalogAdminService : ICatalogAdminService
             CompetencyId = input.CompetencyId,
             Name = name,
             Description = string.IsNullOrWhiteSpace(input.Description) ? null : input.Description.Trim(),
-            Weight = input.Weight,
+            Weight = input.Weight / 100m,
             IsActive = input.IsActive
         });
         await _db.SaveChangesAsync(ct);
@@ -106,14 +106,14 @@ public sealed class CatalogAdminService : ICatalogAdminService
             .Where(m => Levels.Contains(m.Designation!.Name))
             .OrderBy(m => m.Attribute!.Competency!.Name).ThenBy(m => m.Attribute!.Name)
             .Select(m => new LevelMapRow(
-                m.Id, m.Attribute!.Competency!.Name, m.Attribute!.Name, m.Designation!.Name, m.Weight))
+                m.Id, m.Attribute!.Competency!.Name, m.Attribute!.Name, m.Designation!.Name, m.Weight * 100m))
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<CompetencyWeightDto>> GetLevelWeightSummaryAsync(CancellationToken ct = default)
         => await _db.DesignationAttributeMaps
             .Where(m => Levels.Contains(m.Designation!.Name))
             .GroupBy(m => m.Attribute!.Competency!.Name)
-            .Select(g => new CompetencyWeightDto(g.Key, g.Sum(m => m.Weight)))
+            .Select(g => new CompetencyWeightDto(g.Key, g.Sum(m => m.Weight) * 100m))
             .OrderBy(x => x.Competency)
             .ToListAsync(ct);
 
@@ -128,7 +128,7 @@ public sealed class CatalogAdminService : ICatalogAdminService
         var attr = await _db.Attributes.FirstOrDefaultAsync(a => a.CompetencyId == competencyId && a.Name == name, ct);
         if (attr is null)
         {
-            attr = new AttributeItem { CompetencyId = competencyId, Name = name, Weight = weight, IsActive = true };
+            attr = new AttributeItem { CompetencyId = competencyId, Name = name, Weight = weight / 100m, IsActive = true };
             _db.Attributes.Add(attr);
             await _db.SaveChangesAsync(ct);
         }
@@ -138,7 +138,7 @@ public sealed class CatalogAdminService : ICatalogAdminService
 
         _db.DesignationAttributeMaps.Add(new DesignationAttributeMap
         {
-            DesignationId = levelId, AttributeId = attr.Id, Weight = weight
+            DesignationId = levelId, AttributeId = attr.Id, Weight = weight / 100m
         });
         await _db.SaveChangesAsync(ct);
         return Result.Success();
@@ -149,7 +149,7 @@ public sealed class CatalogAdminService : ICatalogAdminService
         if (weight is < 0 or > 100) return Result.Failure("Weightage must be between 0 and 100.");
         var map = await _db.DesignationAttributeMaps.FirstOrDefaultAsync(m => m.Id == mapId, ct);
         if (map is null) return Result.Failure("Mapping not found.");
-        map.Weight = weight;
+        map.Weight = weight / 100m;
         await _db.SaveChangesAsync(ct);
         return Result.Success();
     }
