@@ -110,12 +110,20 @@ public sealed class CatalogAdminService : ICatalogAdminService
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<CompetencyWeightDto>> GetLevelWeightSummaryAsync(CancellationToken ct = default)
-        => await _db.DesignationAttributeMaps
+    {
+        // Aggregate in SQL, then scale to percent in memory — multiplying inside the grouped
+        // projection isn't translatable by EF providers.
+        var totals = await _db.DesignationAttributeMaps
             .Where(m => Levels.Contains(m.Designation!.Name))
             .GroupBy(m => m.Attribute!.Competency!.Name)
-            .Select(g => new CompetencyWeightDto(g.Key, g.Sum(m => m.Weight) * 100m))
-            .OrderBy(x => x.Competency)
+            .Select(g => new { Competency = g.Key, Total = g.Sum(m => m.Weight) })
             .ToListAsync(ct);
+
+        return totals
+            .OrderBy(x => x.Competency)
+            .Select(x => new CompetencyWeightDto(x.Competency, x.Total * 100m))
+            .ToList();
+    }
 
     public async Task<Result> CreateLevelMapAsync(int competencyId, string attributeName, int levelId, decimal weight, CancellationToken ct = default)
     {

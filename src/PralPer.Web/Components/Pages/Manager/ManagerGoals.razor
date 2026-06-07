@@ -98,7 +98,7 @@ else
                     </MudItem>
                 </MudGrid>
 
-                <MudGrid Class="mt-1" AlignItems="Center">
+                <MudGrid Class="mt-1" Style="align-items:center">
                     <MudItem xs="12" md="6">
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Progress &nbsp; <b>@goal.ProgressPercent.ToString("0")%</b></MudText>
                         <MudSlider T="decimal" Value="goal.ProgressPercent" Min="0" Max="100" Step="5" Color="Color.Primary" Disabled="true" />
