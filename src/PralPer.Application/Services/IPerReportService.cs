@@ -6,4 +6,7 @@ namespace PralPer.Application.Services;
 public interface IPerReportService
 {
     Task<PerReportDto?> GetReportAsync(int employeeId, CancellationToken ct = default);
+
+    /// <summary>All finalized PER reports for the active period (manager list view).</summary>
+    Task<IReadOnlyList<PerReportSummaryDto>> GetTeamReportsAsync(CancellationToken ct = default);
 }

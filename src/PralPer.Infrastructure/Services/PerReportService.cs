@@ -13,6 +13,26 @@ public sealed class PerReportService : IPerReportService
 
     public PerReportService(AppDbContext db) => _db = db;
 
+    public async Task<IReadOnlyList<PerReportSummaryDto>> GetTeamReportsAsync(CancellationToken ct = default)
+    {
+        var listPeriodId = await _db.EvaluationPeriods
+            .Where(p => p.Status == PeriodStatus.Active).Select(p => p.Id).FirstOrDefaultAsync(ct);
+        if (listPeriodId == 0) return Array.Empty<PerReportSummaryDto>();
+
+        return await _db.PerReports.AsNoTracking()
+            .Where(r => r.EvaluationPeriodId == listPeriodId)
+            .OrderByDescending(r => r.FinalPercent)
+            .Select(r => new PerReportSummaryDto(
+                r.EmployeeId,
+                r.Employee!.Name,
+                r.Employee!.JobTitle ?? r.Employee!.Designation!.Name,
+                r.Employee!.Department!.Name,
+                r.FinalPercent,
+                r.Band,
+                r.Approved))
+            .ToListAsync(ct);
+    }
+
     public async Task<PerReportDto?> GetReportAsync(int employeeId, CancellationToken ct = default)
     {
         var periodId = await _db.EvaluationPeriods

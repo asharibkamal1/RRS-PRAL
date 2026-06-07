@@ -1,0 +1,111 @@
+@page "/manager/per-reports"
+@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@using PralPer.Application.Reports
+@inject IPerReportService Reports
+@inject IJSRuntime JS
+
+<PageTitle>PER Reports · PRAL PER</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_selected is not null)
+{
+    <div id="per-report">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" Class="no-print" OnClick="@(() => _selected = null)">
+                Back to list
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download"
+                       Class="no-print" OnClick="DownloadPdf">Download PDF</MudButton>
+        </MudStack>
+        <PerReportView Report="_selected" />
+    </div>
+}
+else
+{
+    <MudText Typo="Typo.h4" Class="mb-1">PER Reports</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">Finalized performance evaluation reports for the active period</MudText>
+
+    @if (_summaries.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">No finalized PER reports are available for the active period yet.</MudAlert>
+    }
+    else
+    {
+        <!-- summary stats -->
+        <MudGrid Class="mb-2">
+            <MudItem xs="6" md="3"><KpiCard Title="Total Reports" Value="@_summaries.Count.ToString()" Accent="#2563EB" Icon="@Icons.Material.Filled.Assessment" /></MudItem>
+            <MudItem xs="6" md="3"><KpiCard Title="Approved" Value="@_summaries.Count(s => s.Approved).ToString()" Accent="#16A34A" Icon="@Icons.Material.Filled.CheckCircle" /></MudItem>
+            <MudItem xs="6" md="3"><KpiCard Title="Pending" Value="@_summaries.Count(s => !s.Approved).ToString()" Accent="#EA580C" Icon="@Icons.Material.Filled.HourglassEmpty" /></MudItem>
+            <MudItem xs="6" md="3"><KpiCard Title="Avg Score" Value="@AverageScore" Accent="#7C3AED" Icon="@Icons.Material.Filled.Insights" /></MudItem>
+        </MudGrid>
+
+        <MudTable Items="_summaries" Hover="true" Elevation="1" Breakpoint="Breakpoint.Sm" RowsPerPage="15" Class="mt-2">
+            <HeaderContent>
+                <MudTh>Employee</MudTh>
+                <MudTh>Department</MudTh>
+                <MudTh Style="text-align:center">Final Score</MudTh>
+                <MudTh Style="text-align:center">Band</MudTh>
+                <MudTh Style="text-align:center">Status</MudTh>
+                <MudTh Style="text-align:center">Action</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Employee">
+                    <MudText Typo="Typo.body2" Style="font-weight:600">@context.EmployeeName</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.JobTitle</MudText>
+                </MudTd>
+                <MudTd DataLabel="Department">@context.Department</MudTd>
+                <MudTd DataLabel="Final Score" Style="text-align:center">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Style="@ScoreStyle(context.FinalPercent)">
+                        @context.FinalPercent.ToString("0.0")%
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Band" Style="text-align:center">@context.Band</MudTd>
+                <MudTd DataLabel="Status" Style="text-align:center">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(context.Approved ? Color.Success : Color.Warning)">
+                        @(context.Approved ? "Approved" : "Pending")
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Action" Style="text-align:center">
+                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Visibility" OnClick="@(() => ViewReport(context.EmployeeId))">View</MudButton>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new[] { 15, 30, 60 }" />
+            </PagerContent>
+        </MudTable>
+
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Showing @_summaries.Count reports</MudText>
+    }
+}
+
+@code {
+    private bool _loading = true;
+    private List<PerReportSummaryDto> _summaries = new();
+    private PerReportDto? _selected;
+
+    private string AverageScore => _summaries.Count == 0 ? "—"
+        : (_summaries.Average(s => s.FinalPercent)).ToString("0.0") + "%";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _summaries = (await Reports.GetTeamReportsAsync()).ToList();
+        _loading = false;
+    }
+
+    private async Task ViewReport(int employeeId)
+    {
+        _selected = await Reports.GetReportAsync(employeeId);
+    }
+
+    private async Task DownloadPdf() => await JS.InvokeVoidAsync("window.print");
+
+    private static string ScoreStyle(decimal score)
+    {
+        var color = score >= 80 ? "#16A34A" : score >= 60 ? "#D97706" : "#DC2626";
+        return $"background:{color}1A;color:{color};font-weight:700";
+    }
+}

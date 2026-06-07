@@ -1,5 +1,10 @@
 namespace PralPer.Application.Reports;
 
+/// <summary>One row in the manager's PER Reports list.</summary>
+public sealed record PerReportSummaryDto(
+    int EmployeeId, string EmployeeName, string JobTitle, string Department,
+    decimal FinalPercent, string Band, bool Approved);
+
 public sealed record PerReportGoalLineDto(
     string Title, decimal WeightPercent, decimal ProgressPercent, int Rating, int MaxRating, decimal ContributionPercent);
 
