@@ -1,0 +1,174 @@
+@page "/manager/attribute-administration"
+@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@using PralPer.Application.Catalog
+@inject ICatalogAdminService Catalog
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Attribute Administration · PRAL PER</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-1">
+    <div>
+        <MudText Typo="Typo.h4">Competency Management</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">Configure and manage performance evaluation attributes</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAdd">
+        Add Attribute
+    </MudButton>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-4" />
+}
+else
+{
+    <!-- Summary cards -->
+    <MudGrid Class="my-2">
+        @foreach (var (c, i) in _counts.Select((x, i) => (x, i)))
+        {
+            var color = CardColor(i);
+            <MudItem xs="6" md="2">
+                <MudPaper Class="pa-3" Elevation="1" Style="height:100%">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudAvatar Style="@($"background:{color};color:#fff")" Size="Size.Small">
+                            <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" />
+                        </MudAvatar>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="text-transform:uppercase">@Short(c.Name)</MudText>
+                    </MudStack>
+                    <MudText Typo="Typo.h5" Class="mt-2" Style="font-weight:700">@c.AttributeCount</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">@c.Name</MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+
+    <!-- Filters -->
+    <MudPaper Class="pa-3 my-3" Elevation="1">
+        <MudGrid AlignItems="Center">
+            <MudItem xs="12" md="4">
+                <MudSelect T="int?" @bind-Value="_competencyFilter" Label="Select Competency" Variant="Variant.Outlined"
+                           Margin="Margin.Dense" Clearable="true" Placeholder="All Competencies">
+                    @foreach (var c in _competencies)
+                    {
+                        <MudSelectItem T="int?" Value="c.Id">@c.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudTextField @bind-Value="_search" Label="Search" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                              Placeholder="Search by attribute name or description..." Immediate="true" />
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FilterAlt" OnClick="ApplyFilter">Filter</MudButton>
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Clear" OnClick="ClearFilter">Clear</MudButton>
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Table -->
+    <MudTable Items="_rows" Hover="true" Dense="false" Elevation="1" Breakpoint="Breakpoint.Sm"
+              RowsPerPage="8" Class="mt-2">
+        <HeaderContent>
+            <MudTh>Competency</MudTh>
+            <MudTh>Attribute</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh Style="text-align:center">Weight</MudTh>
+            <MudTh Style="text-align:center">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Competency"><b>@context.Competency</b></MudTd>
+            <MudTd DataLabel="Attribute">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary">@context.Name</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Description"><MudText Typo="Typo.body2" Color="Color.Secondary">@context.Description</MudText></MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                    @(context.IsActive ? "Active" : "Inactive")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Weight" Style="text-align:center">@context.Weight.ToString("0")%</MudTd>
+            <MudTd DataLabel="Actions" Style="text-align:center">
+                <MudTooltip Text="@(context.IsActive ? "Deactivate" : "Activate")">
+                    <MudIconButton Icon="@(context.IsActive ? Icons.Material.Filled.ToggleOn : Icons.Material.Filled.ToggleOff)"
+                                   Color="@(context.IsActive ? Color.Success : Color.Default)" Size="Size.Small"
+                                   OnClick="@(() => ToggleStatus(context))" />
+                </MudTooltip>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => DeleteAttr(context))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 8, 16, 32 }" />
+        </PagerContent>
+    </MudTable>
+
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Showing @_rows.Count attributes</MudText>
+}
+
+@code {
+    private bool _loading = true;
+    private IReadOnlyList<CompetencyOption> _competencies = Array.Empty<CompetencyOption>();
+    private IReadOnlyList<CompetencyCountDto> _counts = Array.Empty<CompetencyCountDto>();
+    private List<AttributeAdminRow> _rows = new();
+    private int? _competencyFilter;
+    private string? _search;
+
+    private static readonly string[] Palette = { "#7C3AED", "#2563EB", "#F59E0B", "#16A34A", "#DC2626", "#0EA5E9" };
+    private static string CardColor(int i) => Palette[i % Palette.Length];
+    private static string Short(string name) => name.Split(' ')[0].ToUpperInvariant();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _competencies = await Catalog.GetCompetenciesAsync();
+        await Reload();
+        _loading = false;
+    }
+
+    private async Task Reload()
+    {
+        _counts = await Catalog.GetCompetencyCountsAsync();
+        _rows = (await Catalog.GetAttributesAsync(_competencyFilter, _search)).ToList();
+    }
+
+    private Task ApplyFilter() => Reload();
+
+    private async Task ClearFilter()
+    {
+        _competencyFilter = null;
+        _search = null;
+        await Reload();
+    }
+
+    private async Task OpenAdd()
+    {
+        var parameters = new DialogParameters<AddAttributeDialog> { { x => x.Competencies, _competencies } };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        var dialog = await DialogService.ShowAsync<AddAttributeDialog>("Add New Attribute", parameters, options);
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: AttributeInput input })
+        {
+            var res = await Catalog.CreateAttributeAsync(input);
+            if (res.Succeeded) { Snackbar.Add("Attribute created.", Severity.Success); await Reload(); }
+            else Snackbar.Add(res.Error ?? "Could not create attribute.", Severity.Error);
+        }
+    }
+
+    private async Task ToggleStatus(AttributeAdminRow row)
+    {
+        var res = await Catalog.SetAttributeStatusAsync(row.Id, !row.IsActive);
+        if (res.Succeeded) await Reload();
+        else Snackbar.Add(res.Error ?? "Could not update status.", Severity.Error);
+    }
+
+    private async Task DeleteAttr(AttributeAdminRow row)
+    {
+        var res = await Catalog.DeleteAttributeAsync(row.Id);
+        if (res.Succeeded) { Snackbar.Add("Attribute deleted.", Severity.Success); await Reload(); }
+        else Snackbar.Add(res.Error ?? "Could not delete attribute.", Severity.Error);
+    }
+}

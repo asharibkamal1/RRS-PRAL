@@ -16,6 +16,7 @@ public static class DbInitializer
         await db.Database.MigrateAsync();
 
         await DataSeeder.SeedAsync(db);                 // reference + sample data (fresh DB only)
+        await CompetencyCatalogSeeder.SeedAsync(db);    // competency catalog + job levels + level maps (idempotent)
         await DataSeeder.SeedProfileHistoryAsync(db);   // profile history for all employees (idempotent)
         await DataSeeder.SeedPerReportAsync(db);        // finalized PER report (idempotent)
         await ManagerDashboardSeeder.SeedAsync(db);     // manager dashboard dummy snapshot (idempotent)

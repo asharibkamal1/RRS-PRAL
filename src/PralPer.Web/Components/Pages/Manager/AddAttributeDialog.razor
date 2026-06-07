@@ -1,0 +1,63 @@
+@using PralPer.Application.Catalog
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight:700">Add New Attribute</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Configure competency details and parameters</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_input.Name" Label="Attribute Name" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Placeholder="e.g., Communication Skills" Class="mb-3" />
+
+        <MudSelect T="int" @bind-Value="_input.CompetencyId" Label="Competency Category" Variant="Variant.Outlined"
+                   Margin="Margin.Dense" Placeholder="Select category..." Class="mb-3">
+            @foreach (var c in Competencies)
+            {
+                <MudSelectItem T="int" Value="c.Id">@c.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudTextField @bind-Value="_input.Description" Label="Description" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Lines="3" Class="mb-3"
+                      Placeholder="Provide a detailed description of this competency attribute..." />
+
+        <MudGrid>
+            <MudItem xs="6">
+                <MudNumericField @bind-Value="_input.Weight" Label="Weightage Percentage" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Min="0" Max="100" Placeholder="0-100" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudSelect T="bool" @bind-Value="_input.IsActive" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem T="bool" Value="true">Active</MudSelectItem>
+                    <MudSelectItem T="bool" Value="false">Inactive</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+        </MudGrid>
+
+        @if (_error is not null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-2">@_error</MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Create">Create Attribute</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public IReadOnlyList<CompetencyOption> Competencies { get; set; } = Array.Empty<CompetencyOption>();
+
+    private readonly AttributeInput _input = new() { IsActive = true };
+    private string? _error;
+
+    private void Create()
+    {
+        if (string.IsNullOrWhiteSpace(_input.Name)) { _error = "Attribute name is required."; return; }
+        if (_input.CompetencyId == 0) { _error = "Please select a competency category."; return; }
+        MudDialog.Close(DialogResult.Ok(_input));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

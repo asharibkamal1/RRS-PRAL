@@ -1,0 +1,198 @@
+@page "/manager/level-mapping"
+@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@using PralPer.Application.Catalog
+@inject ICatalogAdminService Catalog
+@inject ISnackbar Snackbar
+
+<PageTitle>Level Mapping · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Attribute Mapping</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+    Map competencies, attributes and assign weights to Job Levels (Staff, Entry Level, Associates, Professionals, Management, Special)
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="my-4" />
+}
+else
+{
+    <!-- Assignment form -->
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Assignment Form</MudText>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudSelect T="int" @bind-Value="_competencyId" Label="Competency" Required="true" Variant="Variant.Outlined"
+                           Margin="Margin.Dense" Placeholder="Select Competency">
+                    @foreach (var c in _competencies)
+                    {
+                        <MudSelectItem T="int" Value="c.Id">@c.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_attributeName" Label="Attribute" Required="true" Variant="Variant.Outlined"
+                              Margin="Margin.Dense" Placeholder="Enter attribute name" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="int" @bind-Value="_levelId" Label="Designation" Required="true" Variant="Variant.Outlined"
+                           Margin="Margin.Dense" Placeholder="Select Level">
+                    @foreach (var l in _levels)
+                    {
+                        <MudSelectItem T="int" Value="l.Id">@l.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField @bind-Value="_weight" Label="Weightage Percentage" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Min="0" Max="100" Placeholder="0-100" />
+            </MudItem>
+        </MudGrid>
+        <MudStack Row="true" Spacing="2" Class="mt-3">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save"
+                       Disabled="_saving" OnClick="Save">Save</MudButton>
+            <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="ResetForm">Back</MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <!-- Competency Weightage Summary -->
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudText Typo="Typo.h6" Class="mb-3">Competency Weightage Summary</MudText>
+        <MudGrid>
+            @foreach (var s in _summary)
+            {
+                var ok = s.TotalWeight == 100m;
+                var bg = ok ? "#ECFDF5" : "#FEF2F2";
+                var fg = ok ? "#16A34A" : "#DC2626";
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Class="pa-3" Elevation="0" Style="@($"background:{bg};border-radius:12px")">
+                        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                            <MudText Typo="Typo.body2" Style="font-weight:600">@s.Competency</MudText>
+                            <MudIcon Icon="@(ok ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)"
+                                     Style="@($"color:{fg}")" Size="Size.Small" />
+                        </MudStack>
+                        <MudText Typo="Typo.h6" Style="@($"color:{fg};font-weight:700")">
+                            @s.TotalWeight.ToString("0.0")% <span style="color:#94A3B8;font-weight:400;font-size:0.75rem">/ 100%</span>
+                        </MudText>
+                        <MudText Typo="Typo.caption" Style="@($"color:{fg}")">
+                            @(ok ? "Balanced" : s.TotalWeight < 100m ? $"Short by {(100m - s.TotalWeight):0.0}%" : $"Over by {(s.TotalWeight - 100m):0.0}%")
+                        </MudText>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    <!-- Mapping table -->
+    <MudTable Items="_maps" Hover="true" Elevation="1" Breakpoint="Breakpoint.Sm" RowsPerPage="25">
+        <HeaderContent>
+            <MudTh Style="width:60px">S.NO</MudTh>
+            <MudTh>Competency</MudTh>
+            <MudTh>Attribute</MudTh>
+            <MudTh>Levels</MudTh>
+            <MudTh Style="text-align:center">Weightage</MudTh>
+            <MudTh Style="text-align:center">Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate Context="m">
+            <MudTd DataLabel="S.NO">@(string.Format("{0:00}", _maps.IndexOf(m) + 1))</MudTd>
+            <MudTd DataLabel="Competency"><b>@m.Competency</b></MudTd>
+            <MudTd DataLabel="Attribute">@m.Attribute</MudTd>
+            <MudTd DataLabel="Levels">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Style="@LevelStyle(m.Level)">@m.Level</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Weightage" Style="text-align:center">
+                <MudNumericField T="decimal" Value="m.Weight" Min="0" Max="100" Variant="Variant.Outlined"
+                                 Margin="Margin.Dense" Style="max-width:90px;margin:0 auto"
+                                 ValueChanged="@(v => UpdateWeight(m, v))" />
+            </MudTd>
+            <MudTd DataLabel="Actions" Style="text-align:center">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                               OnClick="@(() => DeleteMap(m))" />
+            </MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 25, 50 }" />
+        </PagerContent>
+    </MudTable>
+
+    <MudStack Row="true" Justify="Justify.SpaceBetween" Class="mt-2">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Showing <b>@_maps.Count</b> mapping records</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Total mappings across all designations</MudText>
+    </MudStack>
+}
+
+@code {
+    private bool _loading = true;
+    private bool _saving;
+    private IReadOnlyList<CompetencyOption> _competencies = Array.Empty<CompetencyOption>();
+    private IReadOnlyList<LevelOption> _levels = Array.Empty<LevelOption>();
+    private List<LevelMapRow> _maps = new();
+    private IReadOnlyList<CompetencyWeightDto> _summary = Array.Empty<CompetencyWeightDto>();
+
+    private int _competencyId;
+    private string _attributeName = string.Empty;
+    private int _levelId;
+    private decimal _weight;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _competencies = await Catalog.GetCompetenciesAsync();
+        _levels = await Catalog.GetLevelsAsync();
+        await Reload();
+        _loading = false;
+    }
+
+    private async Task Reload()
+    {
+        _maps = (await Catalog.GetLevelMapsAsync()).ToList();
+        _summary = await Catalog.GetLevelWeightSummaryAsync();
+    }
+
+    private async Task Save()
+    {
+        _saving = true;
+        var res = await Catalog.CreateLevelMapAsync(_competencyId, _attributeName, _levelId, _weight);
+        _saving = false;
+        if (res.Succeeded)
+        {
+            Snackbar.Add("Mapping saved.", Severity.Success);
+            ResetForm();
+            await Reload();
+        }
+        else Snackbar.Add(res.Error ?? "Could not save mapping.", Severity.Error);
+    }
+
+    private void ResetForm()
+    {
+        _competencyId = 0;
+        _attributeName = string.Empty;
+        _levelId = 0;
+        _weight = 0;
+    }
+
+    private async Task UpdateWeight(LevelMapRow m, decimal value)
+    {
+        var res = await Catalog.UpdateLevelMapWeightAsync(m.Id, value);
+        if (res.Succeeded) await Reload();
+        else Snackbar.Add(res.Error ?? "Could not update weight.", Severity.Error);
+    }
+
+    private async Task DeleteMap(LevelMapRow m)
+    {
+        var res = await Catalog.DeleteLevelMapAsync(m.Id);
+        if (res.Succeeded) { Snackbar.Add("Mapping removed.", Severity.Success); await Reload(); }
+        else Snackbar.Add(res.Error ?? "Could not remove mapping.", Severity.Error);
+    }
+
+    private static string LevelStyle(string level) => level switch
+    {
+        "All Levels"    => "background:#F1F5F9;color:#475569",
+        "Entry Level"   => "background:#F3E8FF;color:#7C3AED",
+        "Staff"         => "background:#FCE7F3;color:#DB2777",
+        "Associates"    => "background:#FEF3C7;color:#D97706",
+        "Professionals" => "background:#DBEAFE;color:#2563EB",
+        "Management"    => "background:#DCFCE7;color:#16A34A",
+        "Special"       => "background:#CCFBF1;color:#0D9488",
+        _               => "background:#F1F5F9;color:#475569"
+    };
+}
