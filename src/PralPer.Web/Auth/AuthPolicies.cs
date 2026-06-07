@@ -7,6 +7,9 @@ public static class AuthPolicies
     public const string ManagerArea = "ManagerArea";
     public const string EmployeeArea = "EmployeeArea";
 
+    /// <summary>Shared admin/manager setup screens (attribute, designation, raters, reports, flow).</summary>
+    public const string AdminOrManagerArea = "AdminOrManagerArea";
+
     /// <summary>Claim type carrying the role the user is currently viewing as.</summary>
     public const string ActiveRoleClaim = "active_role";
 

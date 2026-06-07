@@ -1,5 +1,6 @@
 @page "/manager/assign-rators"
-@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@page "/admin/assign-rators"
+@attribute [Authorize(Policy = AuthPolicies.AdminOrManagerArea)]
 @using PralPer.Application.Raters
 @inject IAssignRaterService Raters
 @inject ISnackbar Snackbar

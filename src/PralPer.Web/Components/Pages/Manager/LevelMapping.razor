@@ -1,5 +1,6 @@
 @page "/manager/level-mapping"
-@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@page "/admin/attribute-designation"
+@attribute [Authorize(Policy = AuthPolicies.AdminOrManagerArea)]
 @using PralPer.Application.Catalog
 @inject ICatalogAdminService Catalog
 @inject ISnackbar Snackbar

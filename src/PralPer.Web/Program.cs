@@ -31,7 +31,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthPolicies.AdminArea, p => p.RequireRole(RoleNames.Admin))
     .AddPolicy(AuthPolicies.ManagerArea, p => p.RequireRole(RoleNames.Manager))
-    .AddPolicy(AuthPolicies.EmployeeArea, p => p.RequireRole(RoleNames.Employee));
+    .AddPolicy(AuthPolicies.EmployeeArea, p => p.RequireRole(RoleNames.Employee))
+    .AddPolicy(AuthPolicies.AdminOrManagerArea, p => p.RequireRole(RoleNames.Admin, RoleNames.Manager));
 
 var app = builder.Build();
 

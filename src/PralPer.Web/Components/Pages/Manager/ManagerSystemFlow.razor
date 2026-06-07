@@ -1,5 +1,6 @@
 @page "/manager/system-flow"
-@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@page "/admin/system-flow"
+@attribute [Authorize(Policy = AuthPolicies.AdminOrManagerArea)]
 
 <PageTitle>System Flow · PRAL PER</PageTitle>
 

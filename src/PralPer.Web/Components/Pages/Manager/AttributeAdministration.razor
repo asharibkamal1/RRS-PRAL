@@ -1,5 +1,6 @@
 @page "/manager/attribute-administration"
-@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@page "/admin/attributes"
+@attribute [Authorize(Policy = AuthPolicies.AdminOrManagerArea)]
 @using PralPer.Application.Catalog
 @inject ICatalogAdminService Catalog
 @inject IDialogService DialogService

@@ -1,5 +1,6 @@
 @page "/manager/per-reports"
-@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@page "/admin/per-reports"
+@attribute [Authorize(Policy = AuthPolicies.AdminOrManagerArea)]
 @using PralPer.Application.Reports
 @inject IPerReportService Reports
 @inject IJSRuntime JS
