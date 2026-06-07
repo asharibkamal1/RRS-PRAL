@@ -1,6 +1,6 @@
 @* One role entry in the System Flow "User Roles" card. *@
 
-<div class="pa-2 mb-2" style="@($"border-left:3px solid {Color};background:{Color}0F;border-radius:6px")">
+<div class="pa-2 mb-2" style="@($"border-left:3px solid {Accent};background:{Accent}0F;border-radius:6px")">
     <MudText Typo="Typo.body2" Style="font-weight:700">@Name</MudText>
     <MudText Typo="Typo.caption" Color="Color.Secondary">@Desc</MudText>
 </div>
@@ -8,5 +8,5 @@
 @code {
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
     [Parameter, EditorRequired] public string Desc { get; set; } = string.Empty;
-    [Parameter] public string Color { get; set; } = "#2563EB";
+    [Parameter] public string Accent { get; set; } = "#2563EB";
 }
