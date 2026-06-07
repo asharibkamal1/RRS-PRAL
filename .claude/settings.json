@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/scripts/ensure-dotnet.sh",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
