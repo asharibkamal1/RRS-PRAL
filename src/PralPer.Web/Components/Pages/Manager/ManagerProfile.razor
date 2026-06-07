@@ -1,5 +1,5 @@
-@page "/employee/profile"
-@attribute [Authorize(Policy = AuthPolicies.EmployeeArea)]
+@page "/manager/profile"
+@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
 @using PralPer.Application.Profiles
 @inject IProfileService ProfileService
 @inject ICurrentUser CurrentUser
