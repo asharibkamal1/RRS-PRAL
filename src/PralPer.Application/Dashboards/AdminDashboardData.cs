@@ -4,9 +4,9 @@ namespace PralPer.Application.Dashboards;
 // the manager evaluation table is built live from the Employees table.
 
 public sealed record AdminKpiDto(
-    int TotalEmployees, decimal EmployeesTrend,
-    int EvaluationsPending, decimal PendingTrend,
-    int CompletedReviews, decimal CompletedTrend,
+    int TotalEmployees, decimal? EmployeesTrend,
+    int EvaluationsPending, decimal? PendingTrend,
+    int CompletedReviews, decimal? CompletedTrend,
     string ActiveCycleName, decimal ActiveCyclePercent);
 
 /// <summary>One manager row in the Manager Evaluation table.</summary>

@@ -21,8 +21,8 @@ public static class DbInitializer
         await DataSeeder.SeedPerReportAsync(db);        // finalized PER report (idempotent)
         await ManagerDashboardSeeder.SeedAsync(db);     // manager dashboard dummy snapshot (idempotent)
         await ManagerTeamSeeder.SeedAsync(db);          // manager's team + submitted goals (idempotent)
+        await AdminDemoDataSeeder.SeedAsync(db);        // broad demo population so the admin dashboard is full (idempotent)
         await ManagerPerReportsSeeder.SeedAsync(db);    // PER reports for remaining employees (idempotent)
-        await AdminDashboardSeeder.SeedAsync(db);       // admin dashboard snapshot (idempotent)
         await IdentitySeeder.SeedAsync(sp);             // roles + demo users linked to those employees
     }
 }
