@@ -1,0 +1,163 @@
+@page "/admin/goal-administration"
+@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Admin
+@inject IAdminPeriodService Periods
+@inject ISnackbar Snackbar
+
+<PageTitle>Goal Administration · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Goal Submission Management</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">Allow and restrict submission of goals by employees during selected period</MudText>
+
+<!-- Goal submission period -->
+<MudPaper Class="pa-5 mb-4" Elevation="1" Style="border-radius:14px">
+    <MudText Typo="Typo.h6" Class="mb-4">Goal Submission Period</MudText>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Style="background:#F8FAFC;border-radius:12px">
+        <MudGrid AlignItems="Center">
+            <MudItem xs="12" md="5">
+                <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Goal Submission Start Date <span style="color:#DC2626">*</span></MudText>
+                <MudDatePicker @bind-Date="_start" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Select start date" DateFormat="dd-MMM-yyyy" />
+            </MudItem>
+            <MudItem xs="12" md="5">
+                <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Goal Submission End Date <span style="color:#DC2626">*</span></MudText>
+                <MudDatePicker @bind-Date="_end" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Select end date" DateFormat="dd-MMM-yyyy" />
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Allow Submission</MudText>
+                <MudSwitch T="bool" @bind-Value="_allow" Color="Color.Primary" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Class="pa-4 mb-4" Elevation="0" Style="background:#F8FAFC;border-radius:12px">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Restrict Departments</MudText>
+                <MudSelect T="int?" @bind-Value="_restrictDeptId" Variant="Variant.Outlined" Margin="Margin.Dense"
+                           Clearable="true" Placeholder="Select Departments">
+                    @foreach (var d in _departments)
+                    {
+                        <MudSelectItem T="int?" Value="d.Id">@d.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Restrict Employees</MudText>
+                <MudAutocomplete T="AdminEmployeeOption" @bind-Value="_restrictEmployee" SearchFunc="SearchEmployees"
+                                 ToStringFunc="@(e => e?.Name ?? string.Empty)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                 Placeholder="Search to restrict" Clearable="true"
+                                 AdornmentIcon="@Icons.Material.Filled.Search" Adornment="Adornment.End" />
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    <MudStack Row="true" Justify="Justify.FlexEnd">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send"
+                   Disabled="_saving" OnClick="Submit">Submit</MudButton>
+    </MudStack>
+</MudPaper>
+
+<!-- Archives -->
+<MudPaper Class="pa-4" Elevation="1" Style="border-radius:14px">
+    <MudText Typo="Typo.h6">Goal Submission Archives</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Historical record of goal submission settings, access permissions, and configurations.</MudText>
+
+    <div class="gsa-head">
+        <span style="width:140px">ACTION</span>
+        <span style="flex:1">START DATE</span>
+        <span style="flex:1">END DATE</span>
+        <span style="width:160px;text-align:right">ACCESS STATUS</span>
+    </div>
+    @foreach (var w in _rows)
+    {
+        <div class="gsa-row">
+            <span style="width:140px">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => Activate(w.Id))">SELECT</MudButton>
+            </span>
+            <span style="flex:1">@w.StartDate.ToString("d-MMM-yyyy")</span>
+            <span style="flex:1">@w.EndDate.ToString("d-MMM-yyyy")</span>
+            <span style="width:160px;text-align:right">
+                @if (w.RestrictDepartment is not null)
+                {
+                    <MudChip T="string" Variant="Variant.Text" Style="@DeptStyle(w.RestrictDepartment)">@w.RestrictDepartment</MudChip>
+                }
+                else if (w.RestrictEmployee is not null)
+                {
+                    <MudChip T="string" Variant="Variant.Text" Color="Color.Info">@w.RestrictEmployee</MudChip>
+                }
+                else if (w.AllowSubmission)
+                {
+                    <MudChip T="string" Variant="Variant.Text" Style="background:#DCFCE7;color:#16A34A;font-weight:600">Allow</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Variant="Variant.Text" Color="Color.Error">Blocked</MudChip>
+                }
+            </span>
+        </div>
+    }
+    @if (_rows.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-3">No records.</MudText>
+    }
+
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Showing @(_rows.Count.ToString("00")) goal submission records</MudText>
+</MudPaper>
+
+<style>
+    .gsa-head { display:flex; align-items:center; padding:12px 16px; font-size:.72rem; font-weight:600; color:#64748B; text-transform:uppercase; border-bottom:1px solid #E2E8F0; }
+    .gsa-row { display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid #F1F5F9; }
+</style>
+
+@code {
+    private DateTime? _start;
+    private DateTime? _end;
+    private bool _allow;
+    private int? _restrictDeptId;
+    private AdminEmployeeOption? _restrictEmployee;
+    private bool _saving;
+
+    private IReadOnlyList<AdminDeptOption> _departments = Array.Empty<AdminDeptOption>();
+    private List<GoalWindowRowDto> _rows = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _departments = await Periods.GetDepartmentsAsync();
+        await Reload();
+    }
+
+    private async Task Reload() => _rows = (await Periods.GetGoalWindowsAsync()).ToList();
+
+    private async Task<IEnumerable<AdminEmployeeOption>> SearchEmployees(string value, CancellationToken token)
+        => await Periods.SearchEmployeesAsync(value, token);
+
+    private async Task Submit()
+    {
+        if (_start is null || _end is null) { Snackbar.Add("Select both start and end dates.", Severity.Warning); return; }
+        _saving = true;
+        var res = await Periods.CreateGoalWindowAsync(_start.Value, _end.Value, _allow, _restrictDeptId, _restrictEmployee?.Id);
+        _saving = false;
+        if (res.Succeeded)
+        {
+            Snackbar.Add("Goal submission window saved.", Severity.Success);
+            _start = _end = null; _allow = false; _restrictDeptId = null; _restrictEmployee = null;
+            await Reload();
+        }
+        else Snackbar.Add(res.Error ?? "Could not save.", Severity.Error);
+    }
+
+    private async Task Activate(int id)
+    {
+        var res = await Periods.ActivateGoalWindowAsync(id);
+        if (res.Succeeded) { Snackbar.Add("Goal window activated.", Severity.Success); await Reload(); }
+        else Snackbar.Add(res.Error ?? "Could not activate.", Severity.Error);
+    }
+
+    private static readonly string[] DeptColors = { "#7C3AED", "#D97706", "#2563EB", "#16A34A", "#DB2777", "#0D9488" };
+    private static string DeptStyle(string dept)
+    {
+        var color = DeptColors[(dept.GetHashCode() & int.MaxValue) % DeptColors.Length];
+        return $"background:{color}1A;color:{color};font-weight:600";
+    }
+}

@@ -1,0 +1,42 @@
+@using PralPer.Application.Admin
+
+<div class="prt-head">
+    <span style="width:140px">ACTION</span>
+    <span style="flex:1">START DATE</span>
+    <span style="flex:1">END DATE</span>
+    <span style="width:140px;text-align:right">STATUS</span>
+</div>
+@foreach (var r in Rows)
+{
+    <div class="prt-row">
+        <span style="width:140px">
+            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="@(() => OnSelect.InvokeAsync(r.Id))">SELECT</MudButton>
+        </span>
+        <span style="flex:1">@r.StartDate.ToString("d-MMM-yyyy")</span>
+        <span style="flex:1">@r.EndDate.ToString("d-MMM-yyyy")</span>
+        <span style="width:140px;text-align:right">
+            @if (r.IsActive)
+            {
+                <MudChip T="string" Variant="Variant.Text" Style="background:#DCFCE7;color:#16A34A;font-weight:700">Active</MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Variant="Variant.Outlined" Style="color:#7C3AED;border-color:#E9D5FF">Archive</MudChip>
+            }
+        </span>
+    </div>
+}
+@if (Rows.Count == 0)
+{
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-3">No records.</MudText>
+}
+
+<style>
+    .prt-head { display:flex; align-items:center; padding:12px 16px; font-size:.72rem; font-weight:600; color:#64748B; text-transform:uppercase; border-bottom:1px solid #E2E8F0; }
+    .prt-row { display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid #F1F5F9; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<PeriodRowDto> Rows { get; set; } = Array.Empty<PeriodRowDto>();
+    [Parameter] public EventCallback<int> OnSelect { get; set; }
+}

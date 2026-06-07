@@ -1,0 +1,65 @@
+@page "/admin/evaluation-period"
+@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Admin
+@inject IAdminPeriodService Periods
+@inject ISnackbar Snackbar
+
+<PageTitle>Evaluation Period · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Evaluation Period Management</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">Configure &amp; Manage Evaluation Periods.</MudText>
+
+<!-- Selection form -->
+<MudPaper Class="pa-5 mb-4" Elevation="1" Style="border-radius:14px">
+    <MudText Typo="Typo.h6" Class="mb-4">Evaluation Period Selection</MudText>
+    <MudGrid>
+        <MudItem xs="12" md="5">
+            <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Evaluation Start Date <span style="color:#DC2626">*</span></MudText>
+            <MudDatePicker @bind-Date="_start" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Select start date" DateFormat="dd-MMM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" md="5">
+            <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Evaluation End Date <span style="color:#DC2626">*</span></MudText>
+            <MudDatePicker @bind-Date="_end" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Select end date" DateFormat="dd-MMM-yyyy" />
+        </MudItem>
+    </MudGrid>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" Class="mt-4"
+               Disabled="_saving" OnClick="Submit">Submit</MudButton>
+</MudPaper>
+
+<!-- Records -->
+<MudPaper Class="pa-4" Elevation="1" Style="border-radius:14px">
+    <MudText Typo="Typo.h6">Evaluation Period Records</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Current evaluation period and archives.</MudText>
+
+    <PeriodRecordsTable Rows="_rows" OnSelect="Activate" />
+
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Showing @(_rows.Count.ToString("00")) evaluation period records</MudText>
+</MudPaper>
+
+@code {
+    private DateTime? _start;
+    private DateTime? _end;
+    private bool _saving;
+    private List<PeriodRowDto> _rows = new();
+
+    protected override async Task OnInitializedAsync() => await Reload();
+
+    private async Task Reload() => _rows = (await Periods.GetEvaluationPeriodsAsync()).ToList();
+
+    private async Task Submit()
+    {
+        if (_start is null || _end is null) { Snackbar.Add("Select both start and end dates.", Severity.Warning); return; }
+        _saving = true;
+        var res = await Periods.CreateEvaluationPeriodAsync(_start.Value, _end.Value);
+        _saving = false;
+        if (res.Succeeded) { Snackbar.Add("Evaluation period created.", Severity.Success); _start = _end = null; await Reload(); }
+        else Snackbar.Add(res.Error ?? "Could not create period.", Severity.Error);
+    }
+
+    private async Task Activate(int id)
+    {
+        var res = await Periods.ActivateEvaluationPeriodAsync(id);
+        if (res.Succeeded) { Snackbar.Add("Evaluation period activated.", Severity.Success); await Reload(); }
+        else Snackbar.Add(res.Error ?? "Could not activate.", Severity.Error);
+    }
+}

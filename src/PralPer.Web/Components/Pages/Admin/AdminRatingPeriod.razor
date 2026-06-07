@@ -1,0 +1,65 @@
+@page "/admin/rating-period"
+@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Admin
+@inject IAdminPeriodService Periods
+@inject ISnackbar Snackbar
+
+<PageTitle>Rating Period · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Rating Period Management</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">Configure &amp; Manage Rating Periods.</MudText>
+
+<!-- Selection form -->
+<MudPaper Class="pa-5 mb-4" Elevation="1" Style="border-radius:14px">
+    <MudText Typo="Typo.h6" Class="mb-4">Rating Period Selection</MudText>
+    <MudGrid>
+        <MudItem xs="12" md="5">
+            <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Rating Start Date <span style="color:#DC2626">*</span></MudText>
+            <MudDatePicker @bind-Date="_start" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Select start date" DateFormat="dd-MMM-yyyy" />
+        </MudItem>
+        <MudItem xs="12" md="5">
+            <MudText Typo="Typo.body2" Style="font-weight:600" Class="mb-1">Rating End Date <span style="color:#DC2626">*</span></MudText>
+            <MudDatePicker @bind-Date="_end" Variant="Variant.Outlined" Margin="Margin.Dense" Placeholder="Select end date" DateFormat="dd-MMM-yyyy" />
+        </MudItem>
+    </MudGrid>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Send" Class="mt-4"
+               Disabled="_saving" OnClick="Submit">Submit</MudButton>
+</MudPaper>
+
+<!-- Records -->
+<MudPaper Class="pa-4" Elevation="1" Style="border-radius:14px">
+    <MudText Typo="Typo.h6">Rating Period Records</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Current rating period and archives.</MudText>
+
+    <PeriodRecordsTable Rows="_rows" OnSelect="Activate" />
+
+    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">Showing @(_rows.Count.ToString("00")) rating period records</MudText>
+</MudPaper>
+
+@code {
+    private DateTime? _start;
+    private DateTime? _end;
+    private bool _saving;
+    private List<PeriodRowDto> _rows = new();
+
+    protected override async Task OnInitializedAsync() => await Reload();
+
+    private async Task Reload() => _rows = (await Periods.GetRatingPeriodsAsync()).ToList();
+
+    private async Task Submit()
+    {
+        if (_start is null || _end is null) { Snackbar.Add("Select both start and end dates.", Severity.Warning); return; }
+        _saving = true;
+        var res = await Periods.CreateRatingPeriodAsync(_start.Value, _end.Value);
+        _saving = false;
+        if (res.Succeeded) { Snackbar.Add("Rating period created.", Severity.Success); _start = _end = null; await Reload(); }
+        else Snackbar.Add(res.Error ?? "Could not create period.", Severity.Error);
+    }
+
+    private async Task Activate(int id)
+    {
+        var res = await Periods.ActivateRatingPeriodAsync(id);
+        if (res.Succeeded) { Snackbar.Add("Rating period activated.", Severity.Success); await Reload(); }
+        else Snackbar.Add(res.Error ?? "Could not activate.", Severity.Error);
+    }
+}
