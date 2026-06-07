@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IManagerDashboardService, ManagerDashboardService>();
         services.AddScoped<IManagerGoalService, ManagerGoalService>();
         services.AddScoped<ICatalogAdminService, CatalogAdminService>();
+        services.AddScoped<IAssignRaterService, AssignRaterService>();
 
         // Cross-cutting
         services.AddSingleton<IClock, SystemClock>();

@@ -1,0 +1,270 @@
+@page "/manager/assign-rators"
+@attribute [Authorize(Policy = AuthPolicies.ManagerArea)]
+@using PralPer.Application.Raters
+@inject IAssignRaterService Raters
+@inject ISnackbar Snackbar
+
+<PageTitle>Assign Raters · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-1">Assign Rators</MudText>
+<MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">Configure 360° evaluation peer reviewers for employees</MudText>
+
+<!-- Info banner -->
+<MudPaper Class="pa-4 mb-4" Elevation="0" Style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:12px">
+    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center">
+        <MudAvatar Style="background:#2563EB;color:#fff"><MudIcon Icon="@Icons.Material.Filled.GroupAdd" /></MudAvatar>
+        <div>
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700;color:#1D4ED8">360° Peer Evaluation</MudText>
+            <MudText Typo="Typo.body2" Style="color:#2563EB">
+                Select peer rators who will evaluate each employee's competencies. Rators should be colleagues who work closely with the employee and can provide meaningful feedback.
+            </MudText>
+        </div>
+    </MudStack>
+</MudPaper>
+
+<MudGrid>
+    <!-- Select Employee -->
+    <MudItem xs="12" md="5">
+        <MudPaper Class="pa-4" Elevation="1" Style="height:100%">
+            <MudText Typo="Typo.h6" Class="mb-3">Select Employee</MudText>
+            <MudTextField @bind-Value="_search" Placeholder="Search employees..." Variant="Variant.Outlined"
+                          Margin="Margin.Dense" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" DebounceInterval="250" OnDebounceIntervalElapsed="ReloadEmployees" Class="mb-2" />
+            <MudSelect T="int?" Value="_deptFilter" Variant="Variant.Outlined" Margin="Margin.Dense"
+                       Clearable="true" Placeholder="All Departments" AdornmentIcon="@Icons.Material.Filled.FilterList"
+                       Adornment="Adornment.Start" ValueChanged="OnDeptChanged" Class="mb-3">
+                @foreach (var d in _departments)
+                {
+                    <MudSelectItem T="int?" Value="d.Id">@d.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <div style="max-height:560px;overflow-y:auto">
+                @foreach (var e in _employees)
+                {
+                    var selected = _selectedId == e.Id;
+                    <div class="emp-card @(selected ? "emp-card-sel" : "")" @onclick="@(() => SelectEmployee(e.Id))">
+                        <div style="flex:1">
+                            <MudText Typo="Typo.subtitle2" Style="font-weight:600">@e.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@e.JobTitle</MudText>
+                            <div><MudChip T="string" Size="Size.Small" Variant="Variant.Text" Style="@DeptStyle(e.Department)">@e.Department</MudChip></div>
+                        </div>
+                        @if (selected)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Style="color:#2563EB" />
+                        }
+                    </div>
+                }
+                @if (_employees.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-3">No employees found.</MudText>
+                }
+            </div>
+        </MudPaper>
+    </MudItem>
+
+    <!-- Assignment panel -->
+    <MudItem xs="12" md="7">
+        @if (_view is null)
+        {
+            <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Elevation="1" Style="height:100%;min-height:320px">
+                <MudAvatar Size="Size.Large" Style="background:#F1F5F9;color:#94A3B8" Class="mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.GroupAdd" Size="Size.Large" />
+                </MudAvatar>
+                <MudText Typo="Typo.h6">No Employee Selected</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    Select an employee from the list to assign peer rators for 360° evaluation
+                </MudText>
+            </MudPaper>
+        }
+        else
+        {
+            <!-- Ratee header -->
+            <MudPaper Class="pa-4 mb-3" Elevation="0"
+                      Style="background:linear-gradient(135deg,#2563EB,#3B82F6);border-radius:12px;color:#fff">
+                <MudText Typo="Typo.h5" Style="color:#fff;font-weight:700">@_view.Ratee.Name</MudText>
+                <MudText Typo="Typo.body2" Style="color:#DBEAFE">@_view.Ratee.JobTitle &bull; @_view.Ratee.Department</MudText>
+                <MudPaper Class="pa-2 mt-3 d-inline-flex flex-column" Elevation="0"
+                          Style="background:rgba(255,255,255,.18);border-radius:8px">
+                    <MudText Typo="Typo.caption" Style="color:#EFF6FF">Assigned Rators</MudText>
+                    <MudText Typo="Typo.h6" Style="color:#fff;font-weight:700">@_selectedRatorIds.Count</MudText>
+                </MudPaper>
+            </MudPaper>
+
+            <!-- Available raters -->
+            <MudPaper Class="pa-4 mb-3" Elevation="1">
+                <MudText Typo="Typo.h6">Available Peer Rators</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                    Select colleagues who will provide 360° feedback on this employee's competencies
+                </MudText>
+
+                <div style="max-height:420px;overflow-y:auto">
+                    @foreach (var c in _view.Candidates)
+                    {
+                        var on = _selectedRatorIds.Contains(c.Id);
+                        <div class="rater-row @(on ? "rater-row-on" : "")" @onclick="@(() => ToggleRator(c.Id))">
+                            <MudAvatar Size="Size.Small" Style="@(on ? "background:#2563EB;color:#fff" : "background:#E2E8F0;color:#475569")">
+                                @Initials(c.Name)
+                            </MudAvatar>
+                            <div style="flex:1;margin-left:12px">
+                                <MudText Typo="Typo.subtitle2" Style="font-weight:600">@c.Name</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@c.JobTitle</MudText>
+                            </div>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Style="@DeptStyle(c.Department)">@c.Department</MudChip>
+                            <MudIcon Icon="@(on ? Icons.Material.Filled.Close : Icons.Material.Filled.Add)"
+                                     Size="Size.Small" Style="@(on ? "color:#DC2626" : "color:#94A3B8")" Class="ml-2" />
+                        </div>
+                    }
+                </div>
+            </MudPaper>
+
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.Save" Disabled="_saving" OnClick="Save">
+                @(_saving ? "Saving..." : "Save Rater Assignment")
+            </MudButton>
+        }
+    </MudItem>
+</MudGrid>
+
+<!-- Status table -->
+<MudPaper Class="pa-2 mt-5" Elevation="1">
+    <div class="rstat-head">
+        <span style="width:60px">SR.</span>
+        <span style="flex:1">RATEE EMPLOYEE</span>
+        <span style="width:160px">DEPARTMENT</span>
+        <span style="width:140px">STATUS</span>
+        <span style="width:120px;text-align:center">ACTION</span>
+    </div>
+    @foreach (var (r, idx) in _statusRows.Select((x, i) => (x, i)))
+    {
+        <div class="rstat-row">
+            <span style="width:60px">@(idx + 1).</span>
+            <span style="flex:1;font-weight:600">@r.Name</span>
+            <span style="width:160px"><MudChip T="string" Size="Size.Small" Variant="Variant.Text" Style="@DeptStyle(r.Department)">@r.Department</MudChip></span>
+            <span style="width:140px">
+                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(r.HasRaters ? Color.Success : Color.Warning)">
+                    @(r.HasRaters ? "Done" : "Pending")
+                </MudChip>
+            </span>
+            <span style="width:120px;text-align:center">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" EndIcon="@(_expanded.Contains(r.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                           OnClick="@(() => ToggleExpand(r.Id))">Expand</MudButton>
+            </span>
+        </div>
+        @if (_expanded.Contains(r.Id))
+        {
+            <div class="rstat-detail">
+                @if (r.RaterNames.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">No peer rators assigned yet.</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mr-2">Assigned rators:</MudText>
+                    @foreach (var n in r.RaterNames)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">@n</MudChip>
+                    }
+                }
+            </div>
+        }
+    }
+    @if (_statusRows.Count == 0)
+    {
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-3">No employees.</MudText>
+    }
+</MudPaper>
+
+<style>
+    .emp-card { display:flex; align-items:center; gap:8px; border:1px solid #E2E8F0; border-radius:10px; padding:12px; margin-bottom:10px; cursor:pointer; transition:all .15s; }
+    .emp-card:hover { border-color:#93C5FD; background:#F8FAFC; }
+    .emp-card-sel { border-color:#2563EB; background:#EFF6FF; box-shadow:0 0 0 1px #2563EB inset; }
+    .rater-row { display:flex; align-items:center; border:1px solid #E2E8F0; border-radius:10px; padding:10px 12px; margin-bottom:10px; cursor:pointer; transition:all .15s; }
+    .rater-row:hover { border-color:#93C5FD; background:#F8FAFC; }
+    .rater-row-on { border-color:#2563EB; background:#EFF6FF; }
+    .rstat-head { display:flex; align-items:center; padding:12px 16px; font-size:.72rem; font-weight:600; color:#64748B; text-transform:uppercase; border-bottom:1px solid #E2E8F0; }
+    .rstat-row { display:flex; align-items:center; padding:14px 16px; border-bottom:1px solid #F1F5F9; }
+    .rstat-detail { padding:0 16px 14px 76px; display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+</style>
+
+@code {
+    private IReadOnlyList<RaterDeptOption> _departments = Array.Empty<RaterDeptOption>();
+    private List<RateeEmployeeDto> _employees = new();
+    private List<RateeStatusRow> _statusRows = new();
+    private string? _search;
+    private int? _deptFilter;
+
+    private int? _selectedId;
+    private AssignmentViewDto? _view;
+    private readonly HashSet<int> _selectedRatorIds = new();
+    private readonly HashSet<int> _expanded = new();
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _departments = await Raters.GetDepartmentsAsync();
+        await ReloadEmployees();
+        await ReloadStatus();
+    }
+
+    private async Task ReloadEmployees()
+        => _employees = (await Raters.GetEmployeesAsync(_search, _deptFilter)).ToList();
+
+    private async Task ReloadStatus()
+        => _statusRows = (await Raters.GetRateeStatusAsync()).ToList();
+
+    private async Task OnDeptChanged(int? dept)
+    {
+        _deptFilter = dept;
+        await ReloadEmployees();
+    }
+
+    private async Task SelectEmployee(int id)
+    {
+        _selectedId = id;
+        _view = await Raters.GetAssignmentAsync(id);
+        _selectedRatorIds.Clear();
+        if (_view is not null)
+            foreach (var c in _view.Candidates.Where(c => c.IsAssigned))
+                _selectedRatorIds.Add(c.Id);
+    }
+
+    private void ToggleRator(int id)
+    {
+        if (!_selectedRatorIds.Add(id)) _selectedRatorIds.Remove(id);
+    }
+
+    private async Task Save()
+    {
+        if (_selectedId is not int id) return;
+        _saving = true;
+        var res = await Raters.SaveAssignmentsAsync(id, _selectedRatorIds.ToList());
+        _saving = false;
+        if (res.Succeeded)
+        {
+            Snackbar.Add("Rater assignment saved.", Severity.Success);
+            await ReloadStatus();
+            _view = await Raters.GetAssignmentAsync(id);
+        }
+        else Snackbar.Add(res.Error ?? "Could not save assignment.", Severity.Error);
+    }
+
+    private void ToggleExpand(int id)
+    {
+        if (!_expanded.Add(id)) _expanded.Remove(id);
+    }
+
+    private static string Initials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2 ? $"{parts[0][0]}{parts[1][0]}".ToUpperInvariant()
+                                 : (name.Length > 0 ? name[..1].ToUpperInvariant() : "?");
+    }
+
+    private static readonly string[] DeptColors = { "#7C3AED", "#2563EB", "#DC2626", "#DB2777", "#0D9488", "#D97706", "#16A34A" };
+    private static string DeptStyle(string dept)
+    {
+        var color = DeptColors[(dept.GetHashCode() & int.MaxValue) % DeptColors.Length];
+        return $"background:{color}1A;color:{color}";
+    }
+}
