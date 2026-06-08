@@ -6,8 +6,10 @@ evaluation cycle (Goals 70% + 360° Peer Competency 30%). Built with **.NET 10**
 with **Repository + Unit of Work**, a **service layer**, and a **stored-procedure** data path
 for the Database team's SPs.
 
-> Status: **Phase 0 — foundation + Identity + 3 role dashboards**. Employee feature screens
-> follow next, then Manager and Admin. See `docs/` for the full spec and plans.
+> Status: **all three role modules implemented** — Employee, Manager and Admin screens
+> (dashboards, profiles, goals, 360° rating, attribute/level administration, period setup,
+> assign raters, PER reports, system flow). See `docs/` for the spec, plans and the
+> code-review/cleanup notes.
 
 ## Solution layout (Clean Architecture)
 
@@ -22,7 +24,8 @@ PralPer.sln
 │   └── PralPer.Web             # Blazor (MudBlazor) UI — modular Admin/Manager/Employee
 │                                #   pages + layouts, auth controller, claims plumbing
 └── tests/
-    └── PralPer.UnitTests        # Domain/constant unit tests (xUnit)
+    └── PralPer.UnitTests        # xUnit: domain scoring (PerScale) + service tests
+                                 #   over an in-memory SQLite AppDbContext
 ```
 
 > **Calculation policy:** the app performs **no PER score calculation**. All scores/percentages are
@@ -40,37 +43,62 @@ The DB-team schema swap is isolated to Infrastructure.
 - **Service layer** — feature interfaces in Application, data-bound implementations in Infrastructure; Blazor pages depend on the interfaces only.
 - **Modular UI** — separate `Components/Pages/{Admin,Manager,Employee}` modules, role-aware nav, role dashboards.
 
-## Prerequisites
-- **.NET 10 SDK**
-- **SQL Server** (LocalDB is fine — the default connection string targets `(localdb)\MSSQLLocalDB`)
-- EF Core tools: `dotnet tool install --global dotnet-ef`
+## Run on a new machine (step by step)
 
-## First-time setup
+> **TL;DR:** install the .NET 10 SDK + a SQL Server, set the connection string, then
+> `dotnet run --project src/PralPer.Web`. The database is **created, migrated and seeded
+> automatically on first run** — you do **not** need to run any migration command. The
+> migrations already live in `src/PralPer.Infrastructure/Migrations/`.
 
-1. **Restore & build**
-   ```bash
-   dotnet restore
-   dotnet build
-   ```
+### 1. Prerequisites
+| Tool | Notes |
+|---|---|
+| **.NET 10 SDK** | `dotnet --version` should print `10.x`. Get it from https://dotnet.microsoft.com/download or, on Ubuntu 24.04, `sudo apt-get install -y dotnet-sdk-10.0`. |
+| **SQL Server** | Any edition. **Windows:** LocalDB (ships with Visual Studio / the "Data storage and processing" workload) — the default connection string already targets it. **macOS / Linux:** LocalDB is **not** available — use Docker (below) or a SQL Server instance. |
+| **EF Core CLI** *(optional)* | Only needed if you want to run migration commands manually: `dotnet tool install --global dotnet-ef --version 10.0.0` |
+| **Git** | to clone the repository. |
 
-2. **Create the initial database migration** (entities → schema):
-   ```bash
-   dotnet ef migrations add InitialCreate -p src/PralPer.Infrastructure -s src/PralPer.Web
-   ```
+### 2. Get the code
+```bash
+git clone https://github.com/<your-account>/RRS-PRAL.git
+cd RRS-PRAL
+```
+*(Pushing it the first time: `git init && git add . && git commit -m "init" && git branch -M main && git remote add origin https://github.com/<you>/RRS-PRAL.git && git push -u origin main`.)*
 
-3. **Run** (migrations are applied and demo data seeded automatically at startup):
-   ```bash
-   dotnet run --project src/PralPer.Web
-   ```
-   Then open the printed `https://localhost:xxxx` URL.
+### 3. Start a SQL Server (only if you don't already have one)
+- **Windows (LocalDB):** nothing to do — the default works.
+- **macOS / Linux (Docker):**
+  ```bash
+  docker run -e "ACCEPT_EULA=Y" -e "MSSQL_SA_PASSWORD=Your_password123" \
+    -p 1433:1433 --name pralsql -d mcr.microsoft.com/mssql/server:2022-latest
+  ```
 
-   > The connection string lives in `src/PralPer.Web/appsettings.json`
-   > (`ConnectionStrings:DefaultConnection`). Adjust it for your SQL Server instance if needed.
+### 4. Point the app at your database
+The connection string lives in **`src/PralPer.Web/appsettings.json`** → `ConnectionStrings:DefaultConnection`.
 
-4. **Run tests**
-   ```bash
-   dotnet test
-   ```
+- **Windows / LocalDB (default — leave as-is):**
+  ```
+  Server=(localdb)\MSSQLLocalDB;Database=PralPerDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+  ```
+- **Docker / SQL Server with SA login** — change it to:
+  ```
+  Server=localhost,1433;Database=PralPerDb;User Id=sa;Password=Your_password123;TrustServerCertificate=True;MultipleActiveResultSets=true
+  ```
+> Tip: keep secrets out of source control with user-secrets instead of editing the file:
+> `dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<your-conn-string>" --project src/PralPer.Web`
+
+### 5. Restore, then run
+```bash
+dotnet restore                          # downloads all NuGet packages
+dotnet run --project src/PralPer.Web
+```
+On first run the app will: **apply all migrations → create `PralPerDb` → seed reference + demo data**.
+Open the `https://localhost:49330` URL it prints and sign in with a demo account below.
+
+### 6. (Optional) Run the tests
+```bash
+dotnet test          # 42 tests; uses an in-memory SQLite db, no SQL Server needed
+```
 
 ## Demo accounts (seeded)
 
@@ -83,22 +111,37 @@ The DB-team schema swap is isolated to Infrastructure.
 Multi-role accounts land on **Continue as** to pick the active role; single-role accounts go
 straight to their dashboard. Use **Switch** (top bar) to change the active role.
 
+## Working with migrations (only when you change entities)
+
+You do **not** run these for a normal clone/run — migrations apply automatically at startup.
+Use them only after editing an entity or `AppDbContext`:
+
+```bash
+# add a migration capturing your entity changes
+dotnet ef migrations add <DescriptiveName> -p src/PralPer.Infrastructure -s src/PralPer.Web
+
+# (optional) apply migrations to the DB without launching the app
+dotnet ef database update -p src/PralPer.Infrastructure -s src/PralPer.Web
+
+# see the list / whether the model is in sync with the snapshot
+dotnet ef migrations list -p src/PralPer.Infrastructure -s src/PralPer.Web
+dotnet ef migrations has-pending-model-changes -p src/PralPer.Infrastructure -s src/PralPer.Web
+```
+
 ## Troubleshooting
 
-### `PendingModelChangesWarning: The model for context 'AppDbContext' has pending changes`
-Your migration/snapshot is older than the current entity model (e.g. after pulling new changes).
-Add a migration that captures the changes, then run again:
-```bash
-dotnet ef migrations add <DescriptiveName> -p src/PralPer.Infrastructure -s src/PralPer.Web
-```
-If the database hasn't been created yet and you'd rather start clean, regenerate the initial migration:
-```bash
-dotnet ef database drop -f -p src/PralPer.Infrastructure -s src/PralPer.Web
-# delete src/PralPer.Infrastructure/Migrations
-dotnet ef migrations add InitialCreate -p src/PralPer.Infrastructure -s src/PralPer.Web
-dotnet run --project src/PralPer.Web
-```
-**Rule:** every change to entities or `AppDbContext` needs its own migration.
+- **`LocalDB is not supported on this platform`** — you're on macOS/Linux. LocalDB is Windows-only;
+  start SQL Server via Docker (step 3) and update the connection string (step 4).
+- **`Login failed` / `A network-related error`** — SQL Server isn't reachable or the credentials are
+  wrong. Verify the container is running (`docker ps`) and the `Server`/`User Id`/`Password` match.
+- **`PendingModelChangesWarning: ... has pending changes`** — the model drifted from the snapshot
+  after an entity change. Add a migration to capture it:
+  `dotnet ef migrations add <Name> -p src/PralPer.Infrastructure -s src/PralPer.Web`.
+  (The repo's model is currently **in sync**; `AddDbContext` also ignores this warning so startup
+  never hard-fails on it.)
+- **Start completely fresh** — drop and let it re-seed:
+  `dotnet ef database drop -f -p src/PralPer.Infrastructure -s src/PralPer.Web` then `dotnet run`.
+- **Port already in use** — pass another: `dotnet run --project src/PralPer.Web --urls http://localhost:5080`.
 
 ## Notes
 - Phase 0 screens render via **static server-side rendering**; interactivity (live weight-sum on
