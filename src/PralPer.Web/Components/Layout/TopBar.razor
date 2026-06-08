@@ -4,7 +4,7 @@
     <img src="img/pral-logo.svg" alt="PRAL" style="height:34px;width:34px" />
     <MudStack Spacing="0">
         <MudText Typo="Typo.subtitle1" Style="font-weight:700;line-height:1">PRAL</MudText>
-        <MudText Typo="Typo.caption" Color="Color.Secondary" Style="line-height:1">Performance Evaluation System</MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-none d-sm-flex" Style="line-height:1">Performance Evaluation System</MudText>
     </MudStack>
 
     <MudSpacer />
@@ -13,13 +13,13 @@
     {
         @if (!string.IsNullOrEmpty(CurrentUser.ActiveRole))
         {
-            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary">
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary" Class="d-none d-sm-flex">
                 Viewing as: @CurrentUser.ActiveRole
             </MudChip>
-            <MudLink Href="/continue" Class="mx-2">Switch</MudLink>
+            <MudLink Href="/continue" Class="mx-2 d-none d-sm-flex">Switch</MudLink>
         }
 
-        <MudStack Spacing="0" Class="mr-2" AlignItems="AlignItems.End">
+        <MudStack Spacing="0" Class="mr-2 d-none d-md-flex" AlignItems="AlignItems.End">
             <MudText Typo="Typo.body2" Style="font-weight:600">@CurrentUser.DisplayName</MudText>
             <MudText Typo="Typo.caption" Color="Color.Secondary">@CurrentUser.UserName</MudText>
         </MudStack>

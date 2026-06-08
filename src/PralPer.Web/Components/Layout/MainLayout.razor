@@ -7,16 +7,23 @@
 
 <MudLayout>
     <MudAppBar Elevation="1" Color="Color.Surface">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       Class="d-lg-none mr-2" OnClick="@(() => _drawerOpen = !_drawerOpen)" aria-label="Toggle navigation" />
         <TopBar />
     </MudAppBar>
 
-    <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Elevation="1" ClipMode="DrawerClipMode.Always">
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" Breakpoint="Breakpoint.Lg"
+               Elevation="1" ClipMode="DrawerClipMode.Always">
         <RoleNavMenu />
     </MudDrawer>
 
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-6">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-3 pa-sm-4 pa-md-6">
             @Body
         </MudContainer>
     </MudMainContent>
 </MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+}

@@ -161,3 +161,7 @@ html, body {
     margin-top: 10px; align-self: flex-start;
     background: none; border: none; color: #2563EB; font-weight: 600; cursor: pointer; padding: 0;
 }
+
+/* ---------- Wide fixed-column tables: scroll sideways on small screens ---------- */
+.h-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.h-scroll-inner { min-width: 680px; }
