@@ -9,4 +9,10 @@ public class ApplicationUser : IdentityUser
 
     /// <summary>Optional link to the HRMS Employee master record.</summary>
     public int? EmployeeId { get; set; }
+
+    /// <summary>
+    /// True for accounts provisioned from HRMS with a temporary password — the user is
+    /// forced to set a new password on first sign-in before reaching the app.
+    /// </summary>
+    public bool MustChangePassword { get; set; }
 }

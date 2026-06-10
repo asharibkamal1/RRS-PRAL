@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PralPer.Infrastructure.Identity;
@@ -41,6 +42,10 @@ public class AccountController : Controller
         if (!result.Succeeded)
             return LoginError(result.IsLockedOut ? "Account locked. Try again later." : "Invalid credentials.");
 
+        // HRMS-provisioned accounts must set their own password before reaching the app.
+        if (user.MustChangePassword)
+            return LocalRedirect("/set-password");
+
         var roles = await _userManager.GetRolesAsync(user);
 
         if (roles.Count == 1)
@@ -63,6 +68,40 @@ public class AccountController : Controller
         {
             SetActiveRoleCookie(role);
             return LocalRedirect(RoleRoutes.DashboardFor(role));
+        }
+        return LocalRedirect("/continue");
+    }
+
+    [Authorize]
+    [HttpPost("set-password")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetPassword(
+        [FromForm] string password,
+        [FromForm] string confirmPassword)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return LocalRedirect("/");
+
+        if (string.IsNullOrWhiteSpace(password) || password != confirmPassword)
+            return LocalRedirect("/set-password?error=" + Uri.EscapeDataString("Passwords do not match."));
+
+        // Reset without requiring the temporary password (token-based) and clear the flag.
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, password);
+        if (!result.Succeeded)
+            return LocalRedirect("/set-password?error=" +
+                Uri.EscapeDataString(string.Join(" ", result.Errors.Select(e => e.Description))));
+
+        user.MustChangePassword = false;
+        await _userManager.UpdateAsync(user);
+        await _signInManager.RefreshSignInAsync(user); // regenerate claims without the must-change marker
+
+        var roles = await _userManager.GetRolesAsync(user);
+        if (roles.Count == 1)
+        {
+            SetActiveRoleCookie(roles[0]);
+            return LocalRedirect(RoleRoutes.DashboardFor(roles[0]));
         }
         return LocalRedirect("/continue");
     }

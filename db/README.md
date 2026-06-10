@@ -67,6 +67,39 @@ user-secrets / environment variable) to the DB team's server + database, e.g.:
 Server=YOUR_SQL_HOST;Database=PralPerDb;User Id=app_user;Password=...;TrustServerCertificate=True;MultipleActiveResultSets=true
 ```
 
+## Provisioning logins from HRMS (employee login)
+
+HRMS supplies the **profile**, not a reusable password — so the app **provisions one login
+per active employee** instead of "uploading credentials":
+
+- **`HrmsUserProvisioner`** (`src/PralPer.Infrastructure/Seed/`) runs at startup. For every
+  active employee it creates an ASP.NET Core Identity login with:
+  - **username/email** = the employee's `WorkEmail` (login id). If an employee has no work
+    email, it synthesizes `{hrcode}@{FallbackEmailDomain}` (configurable).
+  - **DisplayName** = employee name, **EmployeeId** = link to the HRMS record.
+  - a **temporary password** = `{TempPasswordPrefix}{HrCode}` (e.g. `Pral@3657`).
+  - **`MustChangePassword = true`** → the user is forced to the **/set-password** screen on
+    first sign-in and cannot reach any app page until they choose a new password.
+  - **roles**: `Employee` for everyone; `Manager` as well if they are someone's reporting
+    manager. (`Admin` is assigned manually — it is never auto-granted.)
+- It is **idempotent**: existing logins are never re-created and their passwords are never
+  touched; only missing role assignments / the employee link are topped up.
+
+Config (`appsettings.json` → `HrmsProvisioning`):
+
+```jsonc
+"HrmsProvisioning": {
+  "Enabled": true,                 // turn provisioning on/off
+  "FallbackEmailDomain": "pral.com.pk", // used only when an employee has no WorkEmail; "" = skip them
+  "TempPasswordPrefix": "Pral@"    // temp password = prefix + HR code
+}
+```
+
+> In production, set `FallbackEmailDomain` to "" so only employees with a real work email get
+> a login, and communicate temp passwords through a secure channel (or switch to AD/SSO later).
+> Today the provisioner reads the `Employee` entity; when it is remapped to `HR_EMPLOYEE` (a
+> `.ToTable("HR_EMPLOYEE")` change in Infrastructure) the same provisioner works unchanged.
+
 ## Notes / gaps to confirm with the DB team
 
 - **`EmployeeId` type** — `ApplicationUser.EmployeeId` is `int`, but `HR_EMPLOYEE.EMP_ID` is

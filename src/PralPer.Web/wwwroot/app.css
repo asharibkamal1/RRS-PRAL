@@ -112,6 +112,13 @@ html, body {
 }
 .auth-btn:hover { background: #1D4ED8; }
 
+.auth-hint {
+    color: #6B7280;
+    font-size: 13px;
+    margin: 0 0 16px;
+    line-height: 1.5;
+}
+
 .auth-error {
     background: #FEF2F2;
     color: #B91C1C;

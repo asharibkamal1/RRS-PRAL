@@ -8,6 +8,10 @@ namespace PralPer.Infrastructure.Identity;
 public sealed class AppUserClaimsPrincipalFactory
     : UserClaimsPrincipalFactory<ApplicationUser, ApplicationRole>
 {
+    /// <summary>Claim type set while a user still owes a forced password reset.</summary>
+    public const string MustChangePasswordClaim = "must_change_password";
+
+
     public AppUserClaimsPrincipalFactory(
         UserManager<ApplicationUser> userManager,
         RoleManager<ApplicationRole> roleManager,
@@ -23,6 +27,11 @@ public sealed class AppUserClaimsPrincipalFactory
 
         if (user.EmployeeId is int empId)
             identity.AddClaim(new Claim("employee_id", empId.ToString()));
+
+        // Drives the forced first-login password reset (enforced by middleware). The claim
+        // disappears once the password is changed and the sign-in is refreshed.
+        if (user.MustChangePassword)
+            identity.AddClaim(new Claim(MustChangePasswordClaim, "true"));
 
         return identity;
     }

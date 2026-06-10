@@ -7,6 +7,7 @@ using PralPer.Application;
 using PralPer.Application.Abstractions;
 using PralPer.Domain.Constants;
 using PralPer.Infrastructure;
+using PralPer.Infrastructure.Identity;
 using PralPer.Infrastructure.Seed;
 using PralPer.Web.Auth;
 using PralPer.Web.Components;
@@ -63,6 +64,28 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Force HRMS-provisioned accounts through the set-password screen before any app page.
+app.Use(async (context, next) =>
+{
+    var user = context.User;
+    if (user?.Identity?.IsAuthenticated == true &&
+        user.HasClaim(c => c.Type == AppUserClaimsPrincipalFactory.MustChangePasswordClaim))
+    {
+        var path = context.Request.Path.Value ?? "/";
+        var allowed = path.StartsWith("/set-password", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/account", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/_", StringComparison.OrdinalIgnoreCase)   // _blazor / _framework
+            || Path.HasExtension(path);                                     // static assets
+        if (!allowed)
+        {
+            context.Response.Redirect("/set-password");
+            return;
+        }
+    }
+    await next();
+});
+
 app.UseAntiforgery();
 
 app.MapControllers();

@@ -25,5 +25,6 @@ public static class DbInitializer
         await AdminPeriodsSeeder.SeedAsync(db);         // archived evaluation/rating/goal periods for the admin setup screens (idempotent)
         await ManagerPerReportsSeeder.SeedAsync(db);    // PER reports for remaining employees (idempotent)
         await IdentitySeeder.SeedAsync(sp);             // roles + demo users linked to those employees
+        await HrmsUserProvisioner.SeedAsync(sp);        // a login per active HRMS employee (temp pwd + forced reset)
     }
 }

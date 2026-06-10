@@ -50,6 +50,7 @@ BEGIN
         [Id]                   NVARCHAR(450)     NOT NULL,
         [DisplayName]          NVARCHAR(MAX)     NOT NULL,   -- custom (ApplicationUser.DisplayName)
         [EmployeeId]           INT               NULL,       -- custom: links to HR_EMPLOYEE.EMP_ID
+        [MustChangePassword]   BIT               NOT NULL CONSTRAINT [DF_AspNetUsers_MustChangePassword] DEFAULT (0),  -- forced first-login reset
         [UserName]             NVARCHAR(256)     NULL,
         [NormalizedUserName]   NVARCHAR(256)     NULL,
         [Email]                NVARCHAR(256)     NULL,
