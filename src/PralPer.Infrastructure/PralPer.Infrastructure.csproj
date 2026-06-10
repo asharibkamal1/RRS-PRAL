@@ -6,12 +6,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.9" />
+    <!-- Shared Data Protection key ring in SQL so the auth cookie works across a multi-server farm. -->
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.9" />
     <!-- Lightweight mapping for stored-procedure calls (DB team exposes SPs). -->
     <PackageReference Include="Dapper" Version="2.1.66" />
   </ItemGroup>

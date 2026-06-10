@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PralPer.Application.Abstractions;
@@ -7,8 +8,11 @@ using PralPer.Infrastructure.Identity;
 
 namespace PralPer.Infrastructure.Persistence;
 
-public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
+public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>, IDataProtectionKeyContext
 {
+    /// <summary>Shared Data Protection key ring (encrypts the auth cookie) — persisted so all servers share it.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     private readonly ICurrentUser? _currentUser;
     private readonly IClock? _clock;
 
