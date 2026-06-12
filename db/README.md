@@ -4,6 +4,18 @@ This folder explains how the PRAL PER app uses the **Database team's tables/SPs*
 (`HR_EMPLOYEE`, `PER_*`, `sp_Insert_*`) together with **ASP.NET Core Identity**
 (login, password, roles).
 
+## Scripts in this folder (hand to the DB team if you can't run migrations)
+
+| Script | Purpose |
+|---|---|
+| `01_Identity_Auth_Tables.sql` | Create the ASP.NET Identity tables (`AspNet*`) + `DataProtectionKeys`. Includes the new OTP / `MustChangePassword` columns. Idempotent. |
+| `02_Identity_Seed_Roles.sql` | Seed the Admin / Manager / Employee roles. |
+| `03_FirstLogin_Otp_Updates.sql` | **Delta** for an EXISTING database: adds the first-login OTP columns to `AspNetUsers` and the unique `WorkEmail` index on `Employees`. Guarded/safe to re-run. Use this when the DB already has the app tables and only needs the latest changes. |
+| `PralPer_Full_Schema.sql` | **Full** app schema (every table + all columns + indexes) for building an EMPTY test/prod DB from scratch. Not guarded — fresh DB only. |
+
+> The two newest migrations (`AddMustChangePassword`, `AddOtpLoginFields`) add **columns and
+> one index only — no new tables**. `03_FirstLogin_Otp_Updates.sql` is exactly those changes.
+
 ## The key idea: two groups of tables, one database
 
 | Group | Tables | Who owns / creates them | How the app uses them |
