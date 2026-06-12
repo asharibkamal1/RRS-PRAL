@@ -67,38 +67,60 @@ user-secrets / environment variable) to the DB team's server + database, e.g.:
 Server=YOUR_SQL_HOST;Database=PralPerDb;User Id=app_user;Password=...;TrustServerCertificate=True;MultipleActiveResultSets=true
 ```
 
-## Provisioning logins from HRMS (employee login)
+## Employee login (HRMS) — first-login OTP flow
 
 HRMS supplies the **profile**, not a reusable password — so the app **provisions one login
-per active employee** instead of "uploading credentials":
+per active employee** and walks each employee through a one-time setup on first sign-in.
 
-- **`HrmsUserProvisioner`** (`src/PralPer.Infrastructure/Seed/`) runs at startup. For every
-  active employee it creates an ASP.NET Core Identity login with:
-  - **username/email** = the employee's `WorkEmail` (login id). If an employee has no work
-    email, it synthesizes `{hrcode}@{FallbackEmailDomain}` (configurable).
-  - **DisplayName** = employee name, **EmployeeId** = link to the HRMS record.
-  - a **temporary password** = `{TempPasswordPrefix}{HrCode}` (e.g. `Pral@3657`).
-  - **`MustChangePassword = true`** → the user is forced to the **/set-password** screen on
-    first sign-in and cannot reach any app page until they choose a new password.
-  - **roles**: `Employee` for everyone; `Manager` as well if they are someone's reporting
-    manager. (`Admin` is assigned manually — it is never auto-granted.)
-- It is **idempotent**: existing logins are never re-created and their passwords are never
-  touched; only missing role assignments / the employee link are topped up.
+**`HrmsUserProvisioner`** (`src/PralPer.Infrastructure/Seed/`) runs at startup and, for every
+active employee, creates an ASP.NET Core Identity login with:
+- **username/email** = the employee's `WorkEmail` (the login id, also the OTP target). If an
+  employee has no work email it synthesizes `{hrcode}@{FallbackEmailDomain}` (configurable).
+- **DisplayName** = employee name, **EmployeeId** = link to the HRMS record.
+- the **shared default password** (`HrmsProvisioning:DefaultPassword`, default `Pral@12345`).
+- **`MustChangePassword = true`**.
+- **roles**: `Employee` for everyone; `Manager` too if they are someone's reporting manager.
+  (`Admin` is assigned manually — never auto-granted; admin accounts keep
+  `MustChangePassword = false` and a real password, so they log in normally.)
 
-Config (`appsettings.json` → `HrmsProvisioning`):
+It is **idempotent**: existing logins are never re-created and their passwords are never
+touched; only missing roles / the employee link are topped up.
+
+### First-login sequence (employees)
+1. Employee signs in with **email + the shared default password**.
+2. Because `MustChangePassword = true`, the app generates a **6-digit OTP**, stores only its
+   **hash + expiry** on the user, and **emails the code** to the employee → **/verify-otp**.
+3. Employee enters the OTP. On success an `otp_verified` marker is set → **/set-password**.
+4. Employee creates their own password → it's hashed and saved, `MustChangePassword = false`,
+   OTP markers cleared → back to the **login** screen.
+5. Employee signs in with the new password → dashboard. The OTP / create-password screens are
+   **never shown again** (a global middleware only pins users who still have the flag).
+
+OTP rules: 6 digits, 10-minute expiry, single-use, **resend** allowed, locked after 5 wrong
+attempts (all configurable under `Otp`).
+
+### Email delivery (OTP)
+OTP email goes through **company SMTP** (`Email:Smtp`). If `Host` is blank the code is **logged**
+instead of sent, so the flow is fully testable in development without a mail server. Put real
+SMTP credentials in user-secrets / environment variables (not committed):
 
 ```jsonc
+"Email": { "Smtp": {
+  "Host": "smtp.yourcompany.com", "Port": 587, "EnableSsl": true,
+  "User": "...", "Password": "...", "From": "no-reply@pral.com.pk", "FromName": "PRAL PER"
+}},
+"Otp": { "Length": 6, "ExpiryMinutes": 10, "MaxAttempts": 5 },
 "HrmsProvisioning": {
-  "Enabled": true,                 // turn provisioning on/off
-  "FallbackEmailDomain": "pral.com.pk", // used only when an employee has no WorkEmail; "" = skip them
-  "TempPasswordPrefix": "Pral@"    // temp password = prefix + HR code
+  "Enabled": true,
+  "FallbackEmailDomain": "pral.com.pk",  // when an employee has no WorkEmail; "" = skip them
+  "DefaultPassword": "Pral@12345"        // shared first-login password
 }
 ```
 
-> In production, set `FallbackEmailDomain` to "" so only employees with a real work email get
-> a login, and communicate temp passwords through a secure channel (or switch to AD/SSO later).
-> Today the provisioner reads the `Employee` entity; when it is remapped to `HR_EMPLOYEE` (a
-> `.ToTable("HR_EMPLOYEE")` change in Infrastructure) the same provisioner works unchanged.
+> In production set `FallbackEmailDomain` to "" so only employees with a real work email get a
+> login (the OTP must reach a real inbox). Today the provisioner reads the `Employee` entity;
+> when it is remapped to `HR_EMPLOYEE` (a `.ToTable("HR_EMPLOYEE")` change in Infrastructure)
+> the same provisioner and login flow work unchanged.
 
 ## Notes / gaps to confirm with the DB team
 

@@ -73,13 +73,17 @@ app.Use(async (context, next) =>
         user.HasClaim(c => c.Type == AppUserClaimsPrincipalFactory.MustChangePasswordClaim))
     {
         var path = context.Request.Path.Value ?? "/";
-        var allowed = path.StartsWith("/set-password", StringComparison.OrdinalIgnoreCase)
+        var allowed = path.StartsWith("/verify-otp", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("/set-password", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/account", StringComparison.OrdinalIgnoreCase)
             || path.StartsWith("/_", StringComparison.OrdinalIgnoreCase)   // _blazor / _framework
             || Path.HasExtension(path);                                     // static assets
         if (!allowed)
         {
-            context.Response.Redirect("/set-password");
+            // Before OTP -> verify screen; after OTP -> create-password screen.
+            var target = user.HasClaim(c => c.Type == AppUserClaimsPrincipalFactory.OtpVerifiedClaim)
+                ? "/set-password" : "/verify-otp";
+            context.Response.Redirect(target);
             return;
         }
     }

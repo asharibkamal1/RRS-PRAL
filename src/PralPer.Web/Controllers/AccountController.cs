@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using PralPer.Application.Abstractions;
 using PralPer.Infrastructure.Identity;
 using PralPer.Web.Auth;
 
@@ -16,11 +17,16 @@ public class AccountController : Controller
 {
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IOtpService _otp;
 
-    public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
+    public AccountController(
+        SignInManager<ApplicationUser> signInManager,
+        UserManager<ApplicationUser> userManager,
+        IOtpService otp)
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _otp = otp;
     }
 
     [HttpPost("login")]
@@ -42,9 +48,13 @@ public class AccountController : Controller
         if (!result.Succeeded)
             return LoginError(result.IsLockedOut ? "Account locked. Try again later." : "Invalid credentials.");
 
-        // HRMS-provisioned accounts must set their own password before reaching the app.
+        // HRMS-provisioned accounts (still on the shared default password) must verify an
+        // emailed OTP, then create their own password, before reaching the app.
         if (user.MustChangePassword)
-            return LocalRedirect("/set-password");
+        {
+            await _otp.GenerateAndSendAsync(user.Id);
+            return LocalRedirect("/verify-otp");
+        }
 
         var roles = await _userManager.GetRolesAsync(user);
 
@@ -73,6 +83,45 @@ public class AccountController : Controller
     }
 
     [Authorize]
+    [HttpPost("verify-otp")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> VerifyOtp([FromForm] string code)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return LocalRedirect("/");
+
+        var result = await _otp.VerifyAsync(user.Id, code ?? string.Empty);
+        switch (result)
+        {
+            case OtpVerifyResult.Success:
+                await _signInManager.RefreshSignInAsync(user); // surfaces the otp_verified claim
+                return LocalRedirect("/set-password");
+            case OtpVerifyResult.Expired:
+                return LocalRedirect("/verify-otp?error=" +
+                    Uri.EscapeDataString("Code expired. Please request a new one."));
+            case OtpVerifyResult.TooManyAttempts:
+                return LocalRedirect("/verify-otp?error=" +
+                    Uri.EscapeDataString("Too many attempts. Please request a new code."));
+            default:
+                return LocalRedirect("/verify-otp?error=" + Uri.EscapeDataString("Invalid code."));
+        }
+    }
+
+    [Authorize]
+    [HttpPost("resend-otp")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResendOtp()
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if (user is null)
+            return LocalRedirect("/");
+
+        await _otp.GenerateAndSendAsync(user.Id);
+        return LocalRedirect("/verify-otp?info=" + Uri.EscapeDataString("A new code has been sent to your email."));
+    }
+
+    [Authorize]
     [HttpPost("set-password")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> SetPassword(
@@ -83,27 +132,30 @@ public class AccountController : Controller
         if (user is null)
             return LocalRedirect("/");
 
+        // Must have passed the OTP step first.
+        if (user.OtpVerifiedAtUtc is null)
+            return LocalRedirect("/verify-otp");
+
         if (string.IsNullOrWhiteSpace(password) || password != confirmPassword)
             return LocalRedirect("/set-password?error=" + Uri.EscapeDataString("Passwords do not match."));
 
-        // Reset without requiring the temporary password (token-based) and clear the flag.
+        // Reset without requiring the old (shared default) password, token-based.
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
         var result = await _userManager.ResetPasswordAsync(user, token, password);
         if (!result.Succeeded)
             return LocalRedirect("/set-password?error=" +
                 Uri.EscapeDataString(string.Join(" ", result.Errors.Select(e => e.Description))));
 
+        // Clear the first-login markers; from now on it's a normal email+password account.
         user.MustChangePassword = false;
+        user.OtpVerifiedAtUtc = null;
         await _userManager.UpdateAsync(user);
-        await _signInManager.RefreshSignInAsync(user); // regenerate claims without the must-change marker
 
-        var roles = await _userManager.GetRolesAsync(user);
-        if (roles.Count == 1)
-        {
-            SetActiveRoleCookie(roles[0]);
-            return LocalRedirect(RoleRoutes.DashboardFor(roles[0]));
-        }
-        return LocalRedirect("/continue");
+        // Per the flow: send them back to the login screen to sign in with the new password.
+        await _signInManager.SignOutAsync();
+        Response.Cookies.Delete(AuthPolicies.ActiveRoleCookie);
+        return LocalRedirect("/?info=" +
+            Uri.EscapeDataString("Password created. Please sign in with your new password."));
     }
 
     [HttpPost("logout")]

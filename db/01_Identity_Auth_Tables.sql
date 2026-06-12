@@ -51,6 +51,10 @@ BEGIN
         [DisplayName]          NVARCHAR(MAX)     NOT NULL,   -- custom (ApplicationUser.DisplayName)
         [EmployeeId]           INT               NULL,       -- custom: links to HR_EMPLOYEE.EMP_ID
         [MustChangePassword]   BIT               NOT NULL CONSTRAINT [DF_AspNetUsers_MustChangePassword] DEFAULT (0),  -- forced first-login reset
+        [OtpCodeHash]          NVARCHAR(MAX)     NULL,       -- first-login OTP (SHA-256 hash, never plaintext)
+        [OtpExpiresAtUtc]      DATETIMEOFFSET    NULL,
+        [OtpFailedAttempts]    INT               NOT NULL CONSTRAINT [DF_AspNetUsers_OtpFailedAttempts] DEFAULT (0),
+        [OtpVerifiedAtUtc]     DATETIMEOFFSET    NULL,       -- set once OTP passed; gates create-password
         [UserName]             NVARCHAR(256)     NULL,
         [NormalizedUserName]   NVARCHAR(256)     NULL,
         [Email]                NVARCHAR(256)     NULL,

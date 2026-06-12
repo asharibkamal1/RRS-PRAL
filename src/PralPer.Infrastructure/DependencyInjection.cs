@@ -46,6 +46,8 @@ public static class DependencyInjection
 
         // Cross-cutting
         services.AddSingleton<IClock, SystemClock>();
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IOtpService, OtpService>();
 
         // ASP.NET Core Identity (cookie-based, app-managed accounts)
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>

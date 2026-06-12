@@ -46,7 +46,10 @@ public static class HrmsUserProvisioner
                 await roleManager.CreateAsync(new ApplicationRole(role) { Description = $"{role} role" });
 
         var fallbackDomain = config["HrmsProvisioning:FallbackEmailDomain"]?.Trim();
-        var tempPasswordPrefix = config["HrmsProvisioning:TempPasswordPrefix"]?.Trim() ?? "Pral@";
+        // First-login password is the SAME shared default for every provisioned employee; they
+        // replace it via the OTP + create-password flow on first sign-in.
+        var defaultPassword = config["HrmsProvisioning:DefaultPassword"]?.Trim() is { Length: > 0 } dp
+            ? dp : "Pral@12345";
 
         var employees = await db.Employees.AsNoTracking()
             .Where(e => e.IsActive)
@@ -86,7 +89,7 @@ public static class HrmsUserProvisioner
                     MustChangePassword = true
                 };
 
-                var result = await userManager.CreateAsync(user, TemporaryPassword(tempPasswordPrefix, emp.HrCode));
+                var result = await userManager.CreateAsync(user, defaultPassword);
                 if (!result.Succeeded)
                 {
                     logger.LogWarning("Could not provision login for {Email}: {Errors}",
@@ -129,12 +132,5 @@ public static class HrmsUserProvisioner
         var local = new string(emp.HrCode.Trim().ToLowerInvariant()
             .Select(c => char.IsLetterOrDigit(c) ? c : '.').ToArray());
         return $"{local}@{fallbackDomain.TrimStart('@')}";
-    }
-
-    /// <summary>Deterministic temp password meeting the Identity policy (>=8, upper, non-alphanumeric).</summary>
-    private static string TemporaryPassword(string prefix, string hrCode)
-    {
-        var pwd = $"{prefix}{hrCode}";
-        return pwd.Length >= 8 ? pwd : pwd + "2026"; // guard very short HR codes
     }
 }

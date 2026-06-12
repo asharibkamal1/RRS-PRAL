@@ -15,6 +15,9 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         b.HasIndex(e => e.HrCode).IsUnique();
 
+        // Work email is the login id, so it must be unique when present (filtered: many rows may be null).
+        b.HasIndex(e => e.WorkEmail).IsUnique().HasFilter("[WorkEmail] IS NOT NULL");
+
         b.HasOne(e => e.Department)
             .WithMany(d => d.Employees)
             .HasForeignKey(e => e.DepartmentId)

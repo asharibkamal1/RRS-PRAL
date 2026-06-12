@@ -11,6 +11,9 @@ public sealed class AppUserClaimsPrincipalFactory
     /// <summary>Claim type set while a user still owes a forced password reset.</summary>
     public const string MustChangePasswordClaim = "must_change_password";
 
+    /// <summary>Claim type set once the first-login OTP has been passed (gates create-password).</summary>
+    public const string OtpVerifiedClaim = "otp_verified";
+
 
     public AppUserClaimsPrincipalFactory(
         UserManager<ApplicationUser> userManager,
@@ -32,6 +35,10 @@ public sealed class AppUserClaimsPrincipalFactory
         // disappears once the password is changed and the sign-in is refreshed.
         if (user.MustChangePassword)
             identity.AddClaim(new Claim(MustChangePasswordClaim, "true"));
+
+        // Present only between passing OTP and setting the new password.
+        if (user.OtpVerifiedAtUtc is not null)
+            identity.AddClaim(new Claim(OtpVerifiedClaim, "true"));
 
         return identity;
     }

@@ -23,6 +23,10 @@
         {
             <div class="auth-error">@Error</div>
         }
+        @if (!string.IsNullOrEmpty(Info))
+        {
+            <div class="auth-info">@Info</div>
+        }
 
         <label class="auth-label" for="email">Email Address / Employee ID</label>
         <input id="email" name="email" type="email" class="auth-input"
@@ -45,6 +49,7 @@
 
 @code {
     [SupplyParameterFromQuery] public string? Error { get; set; }
+    [SupplyParameterFromQuery] public string? Info { get; set; }
     [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
 
     protected override void OnInitialized()
