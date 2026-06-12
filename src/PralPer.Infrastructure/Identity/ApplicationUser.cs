@@ -7,7 +7,7 @@ public class ApplicationUser : IdentityUser
 {
     public string DisplayName { get; set; } = string.Empty;
 
-    /// <summary>Optional link to the HRMS Employee master record.</summary>
+    /// <summary>Optional link to the Employees master record (<c>Employees.Id</c>).</summary>
     public int? EmployeeId { get; set; }
 
     /// <summary>

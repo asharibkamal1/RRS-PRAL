@@ -11,6 +11,7 @@ This folder explains how the PRAL PER app uses the **Database team's tables/SPs*
 | `01_Identity_Auth_Tables.sql` | Create the ASP.NET Identity tables (`AspNet*`) + `DataProtectionKeys`. Already includes the new OTP / `MustChangePassword` columns. Idempotent. **Give this to the DB team to create the Identity tables.** |
 | `02_Identity_Seed_Roles.sql` | Seed the Admin / Manager / Employee roles. |
 | `03_FirstLogin_Otp_Updates.sql` | **Delta** for an EXISTING database that already has `AspNetUsers`: adds just the first-login OTP / `MustChangePassword` columns (and the unique `WorkEmail` index on `Employees`). Guarded/safe to re-run. Only needed if the Identity tables were created from an older copy of `01`. |
+| `04_Link_AspNetUsers_Employees.sql` | Adds the FK **`AspNetUsers.EmployeeId → Employees.Id`** (links each login to its employee row in the existing `Employees` table) + the supporting index. Guarded. |
 
 > The two newest migrations (`AddMustChangePassword`, `AddOtpLoginFields`) add **columns and
 > one index only — no new tables**. If the DB team creates the Identity tables from
