@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using PralPer.Application.Abstractions;
 using PralPer.Infrastructure.Identity;
 using PralPer.Web.Auth;
-using PralPer.Web.Services;
 
 namespace PralPer.Web.Controllers;
 

@@ -2,24 +2,15 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
+using PralPer.Application.Abstractions;
 
-namespace PralPer.Web.Services;
-
-/// <summary>A rendered CAPTCHA: an inline SVG image (data URI) plus the protected answer token.</summary>
-public sealed record CaptchaChallenge(string ImageDataUri, string Token);
+namespace PralPer.Infrastructure.Services;
 
 /// <summary>
 /// Self-contained image CAPTCHA. Renders distorted text as an SVG and carries the answer in an
 /// encrypted, expiring token (via ASP.NET Data Protection) so validation is stateless — no
 /// external service, API keys or server session required.
 /// </summary>
-public interface ICaptchaService
-{
-    bool Enabled { get; }
-    CaptchaChallenge Generate();
-    bool Validate(string? token, string? userInput);
-}
-
 public sealed class CaptchaService : ICaptchaService
 {
     // Excludes visually ambiguous characters (0/O, 1/I/L, etc.).

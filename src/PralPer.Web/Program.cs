@@ -35,7 +35,6 @@ builder.Services.AddDataProtection()
 
 // Auth plumbing
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-builder.Services.AddScoped<ICaptchaService, CaptchaService>();
 builder.Services.AddScoped<IClaimsTransformation, ActiveRoleClaimsTransformation>();
 builder.Services.AddCascadingAuthenticationState();
 

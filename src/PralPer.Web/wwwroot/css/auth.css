@@ -1,0 +1,327 @@
+/* =====================================================================================
+   PRAL PER — Authentication screens (Sign In, OTP, Set/Reset/Forgot password, Continue as)
+   Animated, colorful, professional. Loaded from App.razor.
+   ===================================================================================== */
+
+/* ---------------- Keyframes ---------------- */
+@keyframes authGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes authFloat {
+    0%, 100% { transform: translateY(0) translateX(0); }
+    50% { transform: translateY(30px) translateX(20px); }
+}
+@keyframes authRise {
+    from { opacity: 0; transform: translateY(18px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+@keyframes authPop {
+    0% { opacity: 0; transform: translateY(-6px) scale(.96); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes authShake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-4px); }
+    40%, 60% { transform: translateX(4px); }
+}
+@keyframes authLogoFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+@keyframes captchaIn {
+    from { opacity: 0; transform: scale(.94); }
+    to { opacity: 1; transform: scale(1); }
+}
+@keyframes captchaSpin { to { transform: rotate(360deg); } }
+@keyframes otpPulse {
+    0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, .35); }
+    100% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+}
+@keyframes mailPop {
+    0% { transform: scale(0) rotate(-12deg); opacity: 0; }
+    60% { transform: scale(1.15) rotate(4deg); }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes fieldIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------------- Shell + background ---------------- */
+.auth-shell {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(-45deg, #1E3A8A, #2563EB, #0EA5E9, #0F766E);
+    background-size: 400% 400%;
+    animation: authGradient 18s ease infinite;
+    padding: 24px 16px;
+    overflow: hidden;
+}
+.auth-shell::before,
+.auth-shell::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: .45;
+    pointer-events: none;
+}
+.auth-shell::before {
+    width: 360px; height: 360px; background: #38BDF8;
+    top: -120px; left: -100px;
+    animation: authFloat 12s ease-in-out infinite;
+}
+.auth-shell::after {
+    width: 420px; height: 420px; background: #2DD4BF;
+    bottom: -160px; right: -120px;
+    animation: authFloat 15s ease-in-out infinite reverse;
+}
+
+.auth-wrap {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ---------------- Brand ---------------- */
+.auth-brand { text-align: center; }
+.auth-logo {
+    width: 58px; height: 58px; display: inline-block;
+    padding: 10px;
+    background: rgba(255, 255, 255, .18);
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 18px;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 24px rgba(2, 6, 23, .25);
+    animation: authLogoFloat 5s ease-in-out infinite;
+}
+.auth-brand h1 { margin: 10px 0 0; font-size: 26px; font-weight: 800; color: #fff; letter-spacing: .5px; text-shadow: 0 2px 12px rgba(2, 6, 23, .35); }
+.auth-brand p { margin: 4px 0 0; font-size: 14px; color: rgba(255, 255, 255, .9); }
+
+/* ---------------- Card ---------------- */
+.auth-card {
+    position: relative;
+    width: 100%;
+    background: rgba(255, 255, 255, .96);
+    border: 1px solid rgba(255, 255, 255, .6);
+    border-radius: 20px;
+    padding: 26px 26px 24px;
+    box-shadow: 0 24px 60px rgba(2, 6, 23, .28);
+    backdrop-filter: blur(8px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: authRise .5s cubic-bezier(.22, 1, .36, 1) both;
+}
+.auth-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #2563EB, #0EA5E9, #14B8A6);
+}
+.auth-card h2 {
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0F172A;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.auth-card h2 .mud-icon-root { color: #2563EB; }
+/* gentle staggered entrance for the fields inside a card */
+.auth-card > label,
+.auth-card > .auth-input,
+.auth-card > .pw-field,
+.auth-card > .captcha-row,
+.auth-card > .auth-btn { animation: fieldIn .45s ease both; }
+
+/* ---------------- Inputs ---------------- */
+.auth-label { font-size: 13px; font-weight: 600; color: #334155; margin: 12px 0 6px; }
+.auth-input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 46px;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 0 14px;
+    font-size: 14px;
+    background: #F8FAFC;
+    outline: none;
+    transition: border-color .18s, background .18s, box-shadow .18s;
+}
+.auth-input:focus {
+    border-color: #2563EB;
+    background: #fff;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, .15);
+}
+
+.auth-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 18px; }
+.auth-check { font-size: 13px; color: #334155; display: flex; gap: 6px; align-items: center; }
+.auth-link { color: #2563EB; font-size: 13px; text-decoration: none; transition: color .15s; }
+.auth-link:hover { text-decoration: underline; color: #1D4ED8; }
+
+/* ---------------- Password field + show/hide toggle ---------------- */
+.pw-field { position: relative; }
+.pw-field .auth-input { padding-right: 46px; }
+.pw-toggle {
+    position: absolute;
+    right: 6px; top: 50%;
+    transform: translateY(-50%);
+    width: 34px; height: 34px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: transparent;
+    color: #64748B; cursor: pointer;
+    border-radius: 8px;
+    transition: color .15s, background .15s;
+}
+.pw-toggle:hover { color: #2563EB; background: #EFF6FF; }
+.pw-toggle .eye-off { display: none; }
+.pw-toggle.on .eye { display: none; }
+.pw-toggle.on .eye-off { display: inline-flex; }
+
+/* ---------------- Primary button ---------------- */
+.auth-btn {
+    position: relative;
+    height: 48px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 60%, #0EA5E9 130%);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    cursor: pointer;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, .35);
+    transition: transform .15s, box-shadow .15s, filter .15s;
+}
+.auth-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(37, 99, 235, .45); filter: brightness(1.05); }
+.auth-btn:active { transform: translateY(0) scale(.99); }
+
+.auth-hint { color: #6B7280; font-size: 13px; margin: 0 0 16px; line-height: 1.5; }
+
+/* ---------------- Alerts ---------------- */
+.auth-error {
+    background: #FEF2F2;
+    color: #B91C1C;
+    border: 1px solid #FECACA;
+    border-left: 4px solid #EF4444;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    animation: authShake .5s both, authPop .3s ease both;
+}
+.auth-info {
+    background: #ECFDF5;
+    color: #047857;
+    border: 1px solid #A7F3D0;
+    border-left: 4px solid #10B981;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    animation: authPop .35s ease both;
+}
+
+.auth-linkbtn {
+    background: none; border: none; color: #2563EB;
+    font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px;
+}
+.auth-linkbtn:hover { color: #1D4ED8; }
+
+/* ---------------- CAPTCHA ---------------- */
+.captcha-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.captcha-img {
+    height: 56px; width: 180px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #F1F5F9;
+    user-select: none;
+    animation: captchaIn .4s ease both;
+}
+.captcha-img.flash { animation: captchaIn .4s ease both; }
+.captcha-refresh {
+    width: 40px; height: 40px;
+    border: 1px solid #E2E8F0; border-radius: 8px;
+    background: #fff; color: #2563EB;
+    font-size: 18px; line-height: 1; cursor: pointer;
+    transition: background .15s, transform .15s;
+}
+.captcha-refresh:hover { background: #EFF6FF; }
+.captcha-refresh.spinning { animation: captchaSpin .6s linear infinite; }
+
+/* ---------------- OTP code field + "email sent" badge ---------------- */
+.otp-input {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 10px;
+    padding-left: 24px; /* offset letter-spacing for visual centering */
+}
+.otp-input:focus { animation: otpPulse 1.1s ease-out infinite; }
+
+.otp-mail {
+    width: 64px; height: 64px;
+    margin: 2px auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #DBEAFE, #CCFBF1);
+    color: #2563EB;
+    animation: mailPop .5s cubic-bezier(.22, 1, .36, 1) both;
+}
+.otp-mail .mud-icon-root { font-size: 34px; }
+
+/* ---------------- Footer ---------------- */
+.auth-footer {
+    color: #475569; font-size: 13px;
+    background: rgba(255, 255, 255, .92);
+    border: 1px solid rgba(255, 255, 255, .6);
+    border-radius: 999px;
+    padding: 8px 16px;
+    box-shadow: 0 6px 18px rgba(2, 6, 23, .15);
+}
+.auth-textlink { background: none; border: none; color: #64748B; cursor: pointer; font-size: 13px; }
+
+/* ---------------- Continue-as role cards ---------------- */
+.role-grid { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 520px) { .role-grid { grid-template-columns: 1fr; } }
+
+.role-card {
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-align: left;
+    position: relative;
+    transition: box-shadow .18s, border-color .18s, transform .18s;
+    animation: authRise .5s ease both;
+}
+.role-card:hover { border-color: #2563EB; box-shadow: 0 12px 28px rgba(37, 99, 235, .18); transform: translateY(-3px); }
+.role-icon { font-size: 26px; }
+.role-badge {
+    position: absolute; top: 16px; right: 16px;
+    background: #ECFDF5; color: #16A34A;
+    border-radius: 999px; font-size: 11px; font-weight: 700; padding: 3px 10px;
+}
+.role-card h3 { margin: 6px 0 0; font-size: 18px; font-weight: 700; }
+.role-card p { margin: 0; color: #64748B; font-size: 13px; }
+.role-continue {
+    margin-top: 10px; align-self: flex-start;
+    background: none; border: none; color: #2563EB; font-weight: 600; cursor: pointer; padding: 0;
+}

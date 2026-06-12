@@ -14,7 +14,8 @@
     <form method="post" action="/account/verify-otp" class="auth-card" data-enhance="false">
         <AntiforgeryToken />
 
-        <h2>Enter Verification Code</h2>
+        <div class="otp-mail"><MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" /></div>
+        <h2><MudIcon Icon="@Icons.Material.Filled.Sms" Size="Size.Medium" /> Enter Verification Code</h2>
         <p class="auth-hint">We emailed a one-time code to your registered email address.
             Enter it below to continue. The code expires shortly.</p>
 
@@ -29,7 +30,7 @@
 
         <label class="auth-label" for="code">Verification Code</label>
         <input id="code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code"
-               class="auth-input" placeholder="123456" required autofocus />
+               class="auth-input otp-input" placeholder="••••••" required autofocus />
 
         <button type="submit" class="auth-btn">Verify &amp; Continue</button>
     </form>

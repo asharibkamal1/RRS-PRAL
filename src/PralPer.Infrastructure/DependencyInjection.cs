@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddSingleton<IClock, SystemClock>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
         services.AddScoped<IOtpService, OtpService>();
+        services.AddScoped<ICaptchaService, CaptchaService>();
 
         // ASP.NET Core Identity (cookie-based, app-managed accounts)
         services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
