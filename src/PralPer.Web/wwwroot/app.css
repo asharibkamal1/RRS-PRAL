@@ -5,6 +5,12 @@ html, body {
     background: #F8FAFC;
 }
 
+/* Auth pages must never show a white page background — guaranteed here in app.css
+   (always loaded) as a fallback even if css/auth.css is cached/unavailable. */
+body:has(.auth-shell) {
+    background: linear-gradient(-45deg, #1E3A8A, #2563EB, #0EA5E9, #0F766E);
+}
+
 /* Print: show only the report, hide app chrome */
 @media print {
     .mud-appbar, .mud-drawer, .no-print { display: none !important; }
