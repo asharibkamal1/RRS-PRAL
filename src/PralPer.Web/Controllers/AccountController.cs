@@ -177,6 +177,68 @@ public class AccountController : Controller
             Uri.EscapeDataString("Password created. Please sign in with your new password."));
     }
 
+    // ----- Forgot password (anonymous): email -> OTP -> new password ------------------------
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ForgotPassword(
+        [FromForm] string email,
+        [FromForm] string? captcha = null,
+        [FromForm] string? captchaToken = null)
+    {
+        if (!_captcha.Validate(captchaToken, captcha))
+            return LocalRedirect("/forgot-password?error=" +
+                Uri.EscapeDataString("Incorrect security code. Please try again."));
+
+        // Send a code only if the account exists — but never reveal which is the case.
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var user = await _userManager.FindByEmailAsync(email.Trim());
+            if (user is not null)
+                await _otp.GenerateAndSendAsync(user.Id);
+        }
+
+        return LocalRedirect("/reset-password?email=" + Uri.EscapeDataString(email ?? string.Empty) +
+            "&info=" + Uri.EscapeDataString("If that email is registered, we've sent a verification code."));
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ResetPassword(
+        [FromForm] string email,
+        [FromForm] string code,
+        [FromForm] string password,
+        [FromForm] string confirmPassword)
+    {
+        string Back(string msg) => "/reset-password?email=" + Uri.EscapeDataString(email ?? string.Empty) +
+            "&error=" + Uri.EscapeDataString(msg);
+
+        if (string.IsNullOrWhiteSpace(email))
+            return LocalRedirect("/forgot-password");
+        if (string.IsNullOrWhiteSpace(password) || password != confirmPassword)
+            return LocalRedirect(Back("Passwords do not match."));
+
+        var user = await _userManager.FindByEmailAsync(email.Trim());
+        // Generic failure for both unknown-email and bad-code so we don't leak which emails exist.
+        if (user is null || await _otp.VerifyAsync(user.Id, code ?? string.Empty) != OtpVerifyResult.Success)
+            return LocalRedirect(Back("Invalid or expired code."));
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, token, password);
+        if (!result.Succeeded)
+            return LocalRedirect(Back(string.Join(" ", result.Errors.Select(e => e.Description))));
+
+        // A self-reset also satisfies any pending first-login requirement.
+        user.MustChangePassword = false;
+        user.OtpVerifiedAtUtc = null;
+        await _userManager.UpdateAsync(user);
+
+        return LocalRedirect("/?info=" +
+            Uri.EscapeDataString("Password reset. Please sign in with your new password."));
+    }
+
     [HttpPost("logout")]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Logout()
