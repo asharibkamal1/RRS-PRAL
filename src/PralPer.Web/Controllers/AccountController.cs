@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using PralPer.Application.Abstractions;
 using PralPer.Infrastructure.Identity;
 using PralPer.Web.Auth;
+using PralPer.Web.Services;
 
 namespace PralPer.Web.Controllers;
 
@@ -18,15 +19,27 @@ public class AccountController : Controller
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IOtpService _otp;
+    private readonly ICaptchaService _captcha;
 
     public AccountController(
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager,
-        IOtpService otp)
+        IOtpService otp,
+        ICaptchaService captcha)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _otp = otp;
+        _captcha = captcha;
+    }
+
+    /// <summary>Returns a fresh CAPTCHA challenge (image + token) so the login page can refresh it.</summary>
+    [AllowAnonymous]
+    [HttpGet("captcha")]
+    public IActionResult Captcha()
+    {
+        var c = _captcha.Generate();
+        return Json(new { image = c.ImageDataUri, token = c.Token });
     }
 
     [HttpPost("login")]
@@ -34,9 +47,15 @@ public class AccountController : Controller
     public async Task<IActionResult> Login(
         [FromForm] string email,
         [FromForm] string password,
+        [FromForm] string? captcha = null,
+        [FromForm] string? captchaToken = null,
         [FromForm] bool rememberMe = false,
         [FromForm] string? returnUrl = null)
     {
+        // Bot/brute-force gate — checked before credentials so failures don't probe accounts.
+        if (!_captcha.Validate(captchaToken, captcha))
+            return LoginError("Incorrect security code. Please try again.");
+
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             return LoginError("Please enter your email and password.");
 

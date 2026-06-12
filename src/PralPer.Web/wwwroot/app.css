@@ -150,6 +150,33 @@ html, body {
 }
 .auth-linkbtn:hover { color: #1D4ED8; }
 
+.captcha-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.captcha-img {
+    height: 56px;
+    width: 180px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #F1F5F9;
+    user-select: none;
+}
+.captcha-refresh {
+    width: 38px;
+    height: 38px;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    background: #fff;
+    color: #2563EB;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+.captcha-refresh:hover { background: #EFF6FF; }
+
 .auth-footer {
     color: #64748B;
     font-size: 13px;

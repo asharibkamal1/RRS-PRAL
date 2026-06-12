@@ -1,7 +1,9 @@
 @page "/"
 @layout AuthLayout
 @attribute [AllowAnonymous]
+@using PralPer.Web.Services
 @inject ICurrentUser CurrentUser
+@inject ICaptchaService Captcha
 @inject NavigationManager Nav
 
 <PageTitle>Sign In · PRAL PER</PageTitle>
@@ -36,6 +38,15 @@
         <input id="password" name="password" type="password" class="auth-input"
                placeholder="••••••••" autocomplete="current-password" required />
 
+        <label class="auth-label" for="captcha">Security Check</label>
+        <div class="captcha-row">
+            <img id="captchaImg" class="captcha-img" src="@_challenge.ImageDataUri" alt="CAPTCHA challenge" />
+            <button type="button" id="captchaRefresh" class="captcha-refresh" title="Get a new image" aria-label="Refresh CAPTCHA">↻</button>
+        </div>
+        <input id="captcha" name="captcha" type="text" class="auth-input" autocomplete="off"
+               autocapitalize="characters" spellcheck="false" placeholder="Enter the characters above" required />
+        <input type="hidden" id="captchaToken" name="captchaToken" value="@_challenge.Token" />
+
         <div class="auth-row">
             <label class="auth-check"><input type="checkbox" name="rememberMe" value="true" /> Remember me</label>
             <a class="auth-link" href="/forgot-password">Forgot Password?</a>
@@ -47,13 +58,34 @@
     <div class="auth-footer">🔒 Secure Enterprise Access</div>
 </div>
 
+<script>
+    (function () {
+        var btn = document.getElementById('captchaRefresh');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            fetch('/account/captcha', { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    document.getElementById('captchaImg').src = d.image;
+                    document.getElementById('captchaToken').value = d.token;
+                    document.getElementById('captcha').value = '';
+                })
+                .catch(function () { /* keep the current image on error */ });
+        });
+    })();
+</script>
+
 @code {
     [SupplyParameterFromQuery] public string? Error { get; set; }
     [SupplyParameterFromQuery] public string? Info { get; set; }
     [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
 
+    private CaptchaChallenge _challenge = default!;
+
     protected override void OnInitialized()
     {
+        _challenge = Captcha.Generate();
+
         // Already signed in -> go to the appropriate dashboard.
         if (CurrentUser.IsAuthenticated)
         {
