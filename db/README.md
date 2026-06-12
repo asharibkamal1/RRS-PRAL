@@ -113,7 +113,9 @@ SMTP credentials in user-secrets / environment variables (not committed):
 "HrmsProvisioning": {
   "Enabled": true,
   "FallbackEmailDomain": "pral.com.pk",  // when an employee has no WorkEmail; "" = skip them
-  "DefaultPassword": "Pral@12345"        // shared first-login password
+  "DefaultPassword": "Pral@12345",       // shared first-login password
+  "ResyncDefaultPassword": true          // re-apply DefaultPassword on each run to accounts
+                                         //   still in first-login (MustChangePassword=true)
 }
 ```
 

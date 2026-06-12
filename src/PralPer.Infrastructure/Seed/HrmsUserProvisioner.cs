@@ -50,6 +50,8 @@ public static class HrmsUserProvisioner
         // replace it via the OTP + create-password flow on first sign-in.
         var defaultPassword = config["HrmsProvisioning:DefaultPassword"]?.Trim() is { Length: > 0 } dp
             ? dp : "Pral@12345";
+        // Re-apply the default password to not-yet-activated accounts on each run (default on).
+        var resyncDefaultPassword = config.GetValue("HrmsProvisioning:ResyncDefaultPassword", true);
 
         var employees = await db.Employees.AsNoTracking()
             .Where(e => e.IsActive)
@@ -101,12 +103,23 @@ public static class HrmsUserProvisioner
             }
             else
             {
-                // Keep an existing login linked to the employee, but never touch its password.
+                // Keep an existing login linked to the employee.
                 if (user.EmployeeId != emp.Id)
                 {
                     user.EmployeeId = emp.Id;
                     await userManager.UpdateAsync(user);
                     updated++;
+                }
+
+                // Re-sync the shared default password for accounts that have NOT yet completed
+                // first-login (MustChangePassword still true). This makes a change to the
+                // configured DefaultPassword take effect on the next run, instead of being
+                // stuck on whatever default was used when the account was first created.
+                // Accounts that already set their own password are never touched.
+                if (resyncDefaultPassword && user.MustChangePassword)
+                {
+                    var token = await userManager.GeneratePasswordResetTokenAsync(user);
+                    await userManager.ResetPasswordAsync(user, token, defaultPassword);
                 }
             }
 
