@@ -8,10 +8,10 @@ This folder explains how the PRAL PER app uses the **Database team's tables/SPs*
 
 | Script | Purpose |
 |---|---|
-| `01_Identity_Auth_Tables.sql` | Create the ASP.NET Identity tables (`AspNet*`) + `DataProtectionKeys`. Already includes the new OTP / `MustChangePassword` columns. Idempotent. **Give this to the DB team to create the Identity tables.** |
+| `01_Identity_Auth_Tables.sql` | Create the ASP.NET Identity tables (`Users`, `Roles`, `UserRoles`, `UserClaims`, `UserLogins`, `UserTokens`, `RoleClaims`) + `DataProtectionKeys`. Already includes the new OTP / `MustChangePassword` columns. Idempotent. **Give this to the DB team to create the Identity tables.** |
 | `02_Identity_Seed_Roles.sql` | Seed the Admin / Manager / Employee roles. |
-| `03_FirstLogin_Otp_Updates.sql` | **Delta** for an EXISTING database that already has `AspNetUsers`: adds just the first-login OTP / `MustChangePassword` columns (and the unique `WorkEmail` index on `Employees`). Guarded/safe to re-run. Only needed if the Identity tables were created from an older copy of `01`. |
-| `04_Link_AspNetUsers_Employees.sql` | Adds the FK **`AspNetUsers.EmployeeId → Employees.Id`** (links each login to its employee row in the existing `Employees` table) + the supporting index. Guarded. |
+| `03_FirstLogin_Otp_Updates.sql` | **Delta** for an EXISTING database that already has `Users`: adds just the first-login OTP / `MustChangePassword` columns (and the unique `WorkEmail` index on `Employees`). Guarded/safe to re-run. Only needed if the Identity tables were created from an older copy of `01`. |
+| `04_Link_Users_Employees.sql` | Adds the FK **`Users.EmployeeId → Employees.Id`** (links each login to its employee row in the existing `Employees` table) + the supporting index. Guarded. |
 
 > The two newest migrations (`AddMustChangePassword`, `AddOtpLoginFields`) add **columns and
 > one index only — no new tables**. If the DB team creates the Identity tables from
@@ -21,20 +21,20 @@ This folder explains how the PRAL PER app uses the **Database team's tables/SPs*
 
 | Group | Tables | Who owns / creates them | How the app uses them |
 |---|---|---|---|
-| **Auth (app-owned)** | `AspNetUsers`, `AspNetRoles`, `AspNetUserRoles`, `AspNetUserClaims`, `AspNetUserLogins`, `AspNetUserTokens`, `AspNetRoleClaims`, `DataProtectionKeys` | The **application** (ASP.NET Core Identity). | Login, password hashing, role/claim checks, the auth cookie. |
+| **Auth (app-owned)** | `Users`, `Roles`, `UserRoles`, `UserClaims`, `UserLogins`, `UserTokens`, `RoleClaims`, `DataProtectionKeys` | The **application** (ASP.NET Core Identity). | Login, password hashing, role/claim checks, the auth cookie. |
 | **Business (DB-team-owned)** | `HR_EMPLOYEE`, `PER_EVALUATION_PERIOD`, `PER_GOAL`, `PER_PEER_RATING`, `PER_FINAL_RESULT`, … | The **DB team's script** + their `sp_Insert_*` SPs. | Read employees/periods/results; insert raw inputs via SPs. |
 
 They live **side by side in the same database**. Identity does **not** store passwords in
 `HR_EMPLOYEE` — that table has no login columns. An app login links to an employee through
-the custom column **`AspNetUsers.EmployeeId` → `HR_EMPLOYEE.EMP_ID`**.
+the custom column **`Users.EmployeeId` → `Employees.Id`**.
 
 ## How Identity actually works (short version)
 
-1. **Authentication** — a user submits email + password. Identity looks up `AspNetUsers`
+1. **Authentication** — a user submits email + password. Identity looks up `Users`
    by normalized email, verifies the password against `PasswordHash` (PBKDF2 — never plain
    text), and issues an **encrypted auth cookie**. The cookie keys are stored in
    `DataProtectionKeys` so multiple servers share them.
-2. **Roles** — a user's roles come from `AspNetUserRoles` (join to `AspNetRoles`). This app
+2. **Roles** — a user's roles come from `UserRoles` (join to `Roles`). This app
    uses exactly three: **Admin / Manager / Employee**. A user can hold several (e.g. the
    demo `admin@` account is Admin + Employee → the "Continue as" screen).
 3. **Authorization** — pages/policies require a role (`Program.cs` → `RequireRole(...)`).
@@ -47,7 +47,7 @@ can show that person's goals, ratings and PER report.
 
 ### Path A — let EF create them (recommended when the app may run DDL)
 Identity tables are part of the app's EF migrations. On first run the app calls
-`Database.MigrateAsync()` (see `DbInitializer`) and creates the `AspNet*` +
+`Database.MigrateAsync()` (see `DbInitializer`) and creates the Identity and
 `DataProtectionKeys` tables automatically. Point the connection string at the DB team's
 database and run the app — EF adds the auth tables next to `HR_EMPLOYEE`/`PER_*` and leaves
 the DB-team tables alone. **You don't run any SQL by hand.** This is what "Identity migrates"
@@ -58,7 +58,7 @@ Many production setups don't let the app issue `CREATE TABLE`. In that case **Id
 migrate**, so create the auth tables once with these scripts and stop the app from migrating:
 
 1. DBA runs, against the DB-team database:
-   - **`01_Identity_Auth_Tables.sql`** — creates the 7 `AspNet*` tables + `DataProtectionKeys`
+   - **`01_Identity_Auth_Tables.sql`** — creates the 7 Identity tables + `DataProtectionKeys`
      (idempotent, schema matches the EF model exactly).
    - **`02_Identity_Seed_Roles.sql`** — inserts the Admin/Manager/Employee roles.
 2. In the app, **don't auto-migrate**. Either remove the `await db.Database.MigrateAsync();`
@@ -139,10 +139,9 @@ SMTP credentials in user-secrets / environment variables (not committed):
 
 ## Notes / gaps to confirm with the DB team
 
-- **`EmployeeId` type** — `ApplicationUser.EmployeeId` is `int`, but `HR_EMPLOYEE.EMP_ID` is
-  `BIGINT`. Fine while IDs are small, but to add a real FK, widen `AspNetUsers.EmployeeId`
-  (and the C# property) to `bigint`/`long`. The optional FK in `01_*.sql` is commented out
-  for this reason.
+- **Login ↔ employee link** — `Users.EmployeeId` (`int`) links to the app's `Employees.Id`
+  via FK `FK_Users_Employees_EmployeeId` (see `04_Link_Users_Employees.sql`). This links to
+  the existing `Employees` table — **not** to the DB-team `HR_EMPLOYEE` table.
 - **Missing lookup tables** — `HR_EMPLOYEE` has `DEPARTMENT_ID` and `DESIGNATION_ID` but the
   DB team's script ships no `DEPARTMENT` / `DESIGNATION` tables. Ask them for those (the app
   currently models `Departments`/`Designations` itself).

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using PralPer.Application.Abstractions;
@@ -68,6 +69,16 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     {
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
+
+        // Professional table names for the ASP.NET Identity tables (drop the "AspNet" prefix).
+        // Only the table names change — entity classes and all app code are unaffected.
+        builder.Entity<ApplicationUser>().ToTable("Users");
+        builder.Entity<ApplicationRole>().ToTable("Roles");
+        builder.Entity<IdentityUserRole<string>>().ToTable("UserRoles");
+        builder.Entity<IdentityUserClaim<string>>().ToTable("UserClaims");
+        builder.Entity<IdentityUserLogin<string>>().ToTable("UserLogins");
+        builder.Entity<IdentityUserToken<string>>().ToTable("UserTokens");
+        builder.Entity<IdentityRoleClaim<string>>().ToTable("RoleClaims");
     }
 
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

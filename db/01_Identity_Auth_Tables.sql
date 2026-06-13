@@ -1,24 +1,16 @@
 /* =====================================================================================
-   PRAL PER 2026 — ASP.NET Core Identity (Authentication / Authorization) tables
+   PRAL PER — Identity (Authentication / Authorization) tables
    -------------------------------------------------------------------------------------
-   Run this ONCE against the same database that holds the DB team's HR_EMPLOYEE / PER_*
-   tables. These tables are OWNED BY THE APPLICATION (ASP.NET Core Identity) and are how
-   the app does login, password storage and ROLE management (Admin / Manager / Employee).
+   Professional table names (no "AspNet" prefix): Users, Roles, UserRoles, UserClaims,
+   UserLogins, UserTokens, RoleClaims — plus DataProtectionKeys.
 
-   They are SEPARATE from HR_EMPLOYEE: HR_EMPLOYEE is the HR master record (no password,
-   no login). An app login (AspNetUsers) optionally LINKS to an employee through the
-   AspNetUsers.EmployeeId column, which points at HR_EMPLOYEE.EMP_ID.
+   These tables are OWNED BY THE APPLICATION (ASP.NET Core Identity) and are how the app
+   does login, password storage and ROLE management (Admin / Manager / Employee).
 
-   When to run this script:
-     - Use this only if the application is NOT allowed to run EF Core migrations against
-       the production database (i.e. the DBA owns the schema). The DBA runs this once and
-       the app then just reads/writes these tables at runtime.
-     - If the app IS allowed to migrate, you do not need this file — EF creates these
-       tables automatically on first run (see db/README.md, "Path A").
+   An app login (Users) optionally LINKS to an employee via Users.EmployeeId -> Employees.Id
+   (see db/04_Link_Users_Employees.sql).
 
-   Safe to re-run: every object is guarded with IF NOT EXISTS.
-   Schema matches the EF model exactly (string keys = NVARCHAR(450); custom columns
-   AspNetUsers.DisplayName + AspNetUsers.EmployeeId, AspNetRoles.Description).
+   Safe to re-run: every object is guarded.
    ===================================================================================== */
 
 SET ANSI_NULLS ON;
@@ -27,33 +19,33 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 /* ---------- Roles ---------- */
-IF OBJECT_ID(N'[dbo].[AspNetRoles]', N'U') IS NULL
+IF OBJECT_ID(N'[dbo].[Roles]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetRoles] (
+    CREATE TABLE [dbo].[Roles] (
         [Id]               NVARCHAR(450)  NOT NULL,
         [Description]      NVARCHAR(MAX)  NULL,         -- custom (ApplicationRole.Description)
         [Name]             NVARCHAR(256)  NULL,
         [NormalizedName]   NVARCHAR(256)  NULL,
         [ConcurrencyStamp] NVARCHAR(MAX)  NULL,
-        CONSTRAINT [PK_AspNetRoles] PRIMARY KEY ([Id])
+        CONSTRAINT [PK_Roles] PRIMARY KEY ([Id])
     );
 END;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'RoleNameIndex' AND object_id = OBJECT_ID(N'[dbo].[AspNetRoles]'))
-    CREATE UNIQUE INDEX [RoleNameIndex] ON [dbo].[AspNetRoles] ([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'RoleNameIndex' AND object_id = OBJECT_ID(N'[dbo].[Roles]'))
+    CREATE UNIQUE INDEX [RoleNameIndex] ON [dbo].[Roles] ([NormalizedName]) WHERE [NormalizedName] IS NOT NULL;
 GO
 
 /* ---------- Users (logins) ---------- */
-IF OBJECT_ID(N'[dbo].[AspNetUsers]', N'U') IS NULL
+IF OBJECT_ID(N'[dbo].[Users]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUsers] (
+    CREATE TABLE [dbo].[Users] (
         [Id]                   NVARCHAR(450)     NOT NULL,
         [DisplayName]          NVARCHAR(MAX)     NOT NULL,   -- custom (ApplicationUser.DisplayName)
-        [EmployeeId]           INT               NULL,       -- custom: links to HR_EMPLOYEE.EMP_ID
-        [MustChangePassword]   BIT               NOT NULL CONSTRAINT [DF_AspNetUsers_MustChangePassword] DEFAULT (0),  -- forced first-login reset
+        [EmployeeId]           INT               NULL,       -- custom: links to Employees.Id
+        [MustChangePassword]   BIT               NOT NULL CONSTRAINT [DF_Users_MustChangePassword] DEFAULT (0),  -- forced first-login reset
         [OtpCodeHash]          NVARCHAR(MAX)     NULL,       -- first-login OTP (SHA-256 hash, never plaintext)
         [OtpExpiresAtUtc]      DATETIMEOFFSET    NULL,
-        [OtpFailedAttempts]    INT               NOT NULL CONSTRAINT [DF_AspNetUsers_OtpFailedAttempts] DEFAULT (0),
+        [OtpFailedAttempts]    INT               NOT NULL CONSTRAINT [DF_Users_OtpFailedAttempts] DEFAULT (0),
         [OtpVerifiedAtUtc]     DATETIMEOFFSET    NULL,       -- set once OTP passed; gates create-password
         [UserName]             NVARCHAR(256)     NULL,
         [NormalizedUserName]   NVARCHAR(256)     NULL,
@@ -69,100 +61,100 @@ BEGIN
         [LockoutEnd]           DATETIMEOFFSET    NULL,
         [LockoutEnabled]       BIT               NOT NULL,
         [AccessFailedCount]    INT               NOT NULL,
-        CONSTRAINT [PK_AspNetUsers] PRIMARY KEY ([Id])
+        CONSTRAINT [PK_Users] PRIMARY KEY ([Id])
     );
 END;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'EmailIndex' AND object_id = OBJECT_ID(N'[dbo].[AspNetUsers]'))
-    CREATE INDEX [EmailIndex] ON [dbo].[AspNetUsers] ([NormalizedEmail]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'EmailIndex' AND object_id = OBJECT_ID(N'[dbo].[Users]'))
+    CREATE INDEX [EmailIndex] ON [dbo].[Users] ([NormalizedEmail]);
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UserNameIndex' AND object_id = OBJECT_ID(N'[dbo].[AspNetUsers]'))
-    CREATE UNIQUE INDEX [UserNameIndex] ON [dbo].[AspNetUsers] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UserNameIndex' AND object_id = OBJECT_ID(N'[dbo].[Users]'))
+    CREATE UNIQUE INDEX [UserNameIndex] ON [dbo].[Users] ([NormalizedUserName]) WHERE [NormalizedUserName] IS NOT NULL;
 GO
 
 /* ---------- Role claims ---------- */
-IF OBJECT_ID(N'[dbo].[AspNetRoleClaims]', N'U') IS NULL
+IF OBJECT_ID(N'[dbo].[RoleClaims]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetRoleClaims] (
+    CREATE TABLE [dbo].[RoleClaims] (
         [Id]         INT            NOT NULL IDENTITY,
         [RoleId]     NVARCHAR(450)  NOT NULL,
         [ClaimType]  NVARCHAR(MAX)  NULL,
         [ClaimValue] NVARCHAR(MAX)  NULL,
-        CONSTRAINT [PK_AspNetRoleClaims] PRIMARY KEY ([Id]),
-        CONSTRAINT [FK_AspNetRoleClaims_AspNetRoles_RoleId]
-            FOREIGN KEY ([RoleId]) REFERENCES [dbo].[AspNetRoles] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [PK_RoleClaims] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_RoleClaims_Roles_RoleId]
+            FOREIGN KEY ([RoleId]) REFERENCES [dbo].[Roles] ([Id]) ON DELETE CASCADE
     );
 END;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetRoleClaims_RoleId' AND object_id = OBJECT_ID(N'[dbo].[AspNetRoleClaims]'))
-    CREATE INDEX [IX_AspNetRoleClaims_RoleId] ON [dbo].[AspNetRoleClaims] ([RoleId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_RoleClaims_RoleId' AND object_id = OBJECT_ID(N'[dbo].[RoleClaims]'))
+    CREATE INDEX [IX_RoleClaims_RoleId] ON [dbo].[RoleClaims] ([RoleId]);
 GO
 
 /* ---------- User claims ---------- */
-IF OBJECT_ID(N'[dbo].[AspNetUserClaims]', N'U') IS NULL
+IF OBJECT_ID(N'[dbo].[UserClaims]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserClaims] (
+    CREATE TABLE [dbo].[UserClaims] (
         [Id]         INT            NOT NULL IDENTITY,
         [UserId]     NVARCHAR(450)  NOT NULL,
         [ClaimType]  NVARCHAR(MAX)  NULL,
         [ClaimValue] NVARCHAR(MAX)  NULL,
-        CONSTRAINT [PK_AspNetUserClaims] PRIMARY KEY ([Id]),
-        CONSTRAINT [FK_AspNetUserClaims_AspNetUsers_UserId]
-            FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [PK_UserClaims] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_UserClaims_Users_UserId]
+            FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE CASCADE
     );
 END;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserClaims_UserId' AND object_id = OBJECT_ID(N'[dbo].[AspNetUserClaims]'))
-    CREATE INDEX [IX_AspNetUserClaims_UserId] ON [dbo].[AspNetUserClaims] ([UserId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_UserClaims_UserId' AND object_id = OBJECT_ID(N'[dbo].[UserClaims]'))
+    CREATE INDEX [IX_UserClaims_UserId] ON [dbo].[UserClaims] ([UserId]);
 GO
 
 /* ---------- External logins ---------- */
-IF OBJECT_ID(N'[dbo].[AspNetUserLogins]', N'U') IS NULL
+IF OBJECT_ID(N'[dbo].[UserLogins]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserLogins] (
+    CREATE TABLE [dbo].[UserLogins] (
         [LoginProvider]       NVARCHAR(450)  NOT NULL,
         [ProviderKey]         NVARCHAR(450)  NOT NULL,
         [ProviderDisplayName] NVARCHAR(MAX)  NULL,
         [UserId]              NVARCHAR(450)  NOT NULL,
-        CONSTRAINT [PK_AspNetUserLogins] PRIMARY KEY ([LoginProvider], [ProviderKey]),
-        CONSTRAINT [FK_AspNetUserLogins_AspNetUsers_UserId]
-            FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [PK_UserLogins] PRIMARY KEY ([LoginProvider], [ProviderKey]),
+        CONSTRAINT [FK_UserLogins_Users_UserId]
+            FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE CASCADE
     );
 END;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserLogins_UserId' AND object_id = OBJECT_ID(N'[dbo].[AspNetUserLogins]'))
-    CREATE INDEX [IX_AspNetUserLogins_UserId] ON [dbo].[AspNetUserLogins] ([UserId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_UserLogins_UserId' AND object_id = OBJECT_ID(N'[dbo].[UserLogins]'))
+    CREATE INDEX [IX_UserLogins_UserId] ON [dbo].[UserLogins] ([UserId]);
 GO
 
 /* ---------- User <-> Role join (this is what gives a login its role) ---------- */
-IF OBJECT_ID(N'[dbo].[AspNetUserRoles]', N'U') IS NULL
+IF OBJECT_ID(N'[dbo].[UserRoles]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserRoles] (
+    CREATE TABLE [dbo].[UserRoles] (
         [UserId] NVARCHAR(450) NOT NULL,
         [RoleId] NVARCHAR(450) NOT NULL,
-        CONSTRAINT [PK_AspNetUserRoles] PRIMARY KEY ([UserId], [RoleId]),
-        CONSTRAINT [FK_AspNetUserRoles_AspNetRoles_RoleId]
-            FOREIGN KEY ([RoleId]) REFERENCES [dbo].[AspNetRoles] ([Id]) ON DELETE CASCADE,
-        CONSTRAINT [FK_AspNetUserRoles_AspNetUsers_UserId]
-            FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [PK_UserRoles] PRIMARY KEY ([UserId], [RoleId]),
+        CONSTRAINT [FK_UserRoles_Roles_RoleId]
+            FOREIGN KEY ([RoleId]) REFERENCES [dbo].[Roles] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_UserRoles_Users_UserId]
+            FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE CASCADE
     );
 END;
 GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_AspNetUserRoles_RoleId' AND object_id = OBJECT_ID(N'[dbo].[AspNetUserRoles]'))
-    CREATE INDEX [IX_AspNetUserRoles_RoleId] ON [dbo].[AspNetUserRoles] ([RoleId]);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_UserRoles_RoleId' AND object_id = OBJECT_ID(N'[dbo].[UserRoles]'))
+    CREATE INDEX [IX_UserRoles_RoleId] ON [dbo].[UserRoles] ([RoleId]);
 GO
 
 /* ---------- User tokens ---------- */
-IF OBJECT_ID(N'[dbo].[AspNetUserTokens]', N'U') IS NULL
+IF OBJECT_ID(N'[dbo].[UserTokens]', N'U') IS NULL
 BEGIN
-    CREATE TABLE [dbo].[AspNetUserTokens] (
+    CREATE TABLE [dbo].[UserTokens] (
         [UserId]        NVARCHAR(450)  NOT NULL,
         [LoginProvider] NVARCHAR(450)  NOT NULL,
         [Name]          NVARCHAR(450)  NOT NULL,
         [Value]         NVARCHAR(MAX)  NULL,
-        CONSTRAINT [PK_AspNetUserTokens] PRIMARY KEY ([UserId], [LoginProvider], [Name]),
-        CONSTRAINT [FK_AspNetUserTokens_AspNetUsers_UserId]
-            FOREIGN KEY ([UserId]) REFERENCES [dbo].[AspNetUsers] ([Id]) ON DELETE CASCADE
+        CONSTRAINT [PK_UserTokens] PRIMARY KEY ([UserId], [LoginProvider], [Name]),
+        CONSTRAINT [FK_UserTokens_Users_UserId]
+            FOREIGN KEY ([UserId]) REFERENCES [dbo].[Users] ([Id]) ON DELETE CASCADE
     );
 END;
 GO
@@ -179,15 +171,4 @@ BEGIN
         CONSTRAINT [PK_DataProtectionKeys] PRIMARY KEY ([Id])
     );
 END;
-GO
-
-/* ---------- OPTIONAL: enforce the HR_EMPLOYEE link at the DB level ----------
-   Uncomment if you want the database to guarantee every linked login points at a real
-   employee. EMP_ID is BIGINT in HR_EMPLOYEE, so AspNetUsers.EmployeeId (INT) would need
-   to be widened to BIGINT first (see db/README.md, "EmployeeId type" note).
-
-   ALTER TABLE [dbo].[AspNetUsers]
-       ADD CONSTRAINT [FK_AspNetUsers_HR_EMPLOYEE_EmployeeId]
-       FOREIGN KEY ([EmployeeId]) REFERENCES [dbo].[HR_EMPLOYEE] ([EMP_ID]);
-*/
 GO
