@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
@@ -37,6 +38,10 @@ builder.Services.AddDataProtection()
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddScoped<IClaimsTransformation, ActiveRoleClaimsTransformation>();
 builder.Services.AddCascadingAuthenticationState();
+
+// Dynamic "perm:{permission}" policies so admin-created permissions are enforceable without code.
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthPolicies.AdminArea, p => p.RequireRole(RoleNames.Admin))

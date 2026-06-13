@@ -1,0 +1,71 @@
+@page "/admin/roles"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Identity
+@using PralPer.Application.Services
+@inject IIdentityAdminService Admin
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Roles · PRAL PER</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight:700">Roles</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Create roles and grant them permissions. More roles can be added any time.</MudText>
+    </div>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => OpenRole(null))">Add Role</MudButton>
+</MudStack>
+
+<MudTable Items="_roles" Hover="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>Role</MudTh>
+        <MudTh>Description</MudTh>
+        <MudTh>Users</MudTh>
+        <MudTh>Permissions</MudTh>
+        <MudTh Style="text-align:right">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Role"><b>@context.Name</b></MudTd>
+        <MudTd DataLabel="Description">@context.Description</MudTd>
+        <MudTd DataLabel="Users">@context.UserCount</MudTd>
+        <MudTd DataLabel="Permissions">
+            @foreach (var p in context.Permissions) { <MudChip T="string" Size="Size.Small">@p</MudChip> }
+        </MudTd>
+        <MudTd Style="text-align:right">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenRole(context.Id))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteRole(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private IReadOnlyList<RoleListItem> _roles = Array.Empty<RoleListItem>();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        _roles = await Admin.GetRolesAsync();
+        _loading = false;
+    }
+
+    private async Task OpenRole(string? id)
+    {
+        var parameters = new DialogParameters<RoleEditDialog> { { x => x.RoleId, id } };
+        var dialog = await DialogService.ShowAsync<RoleEditDialog>(id is null ? "Add Role" : "Edit Role", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) { Snackbar.Add("Role saved.", Severity.Success); await Load(); }
+    }
+
+    private async Task DeleteRole(RoleListItem r)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete role", $"Delete role '{r.Name}'? ({r.UserCount} user(s) assigned)", yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var res = await Admin.DeleteRoleAsync(r.Id);
+        Snackbar.Add(res.Succeeded ? "Role deleted." : res.Error ?? "Failed.", res.Succeeded ? Severity.Success : Severity.Error);
+        await Load();
+    }
+}

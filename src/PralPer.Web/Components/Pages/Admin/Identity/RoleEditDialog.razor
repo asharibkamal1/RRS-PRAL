@@ -1,0 +1,60 @@
+@using PralPer.Application.Identity
+@using PralPer.Application.Services
+@inject IIdentityAdminService Admin
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6" Style="font-weight:700">@(_isEdit ? "Edit Role" : "Add Role")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_model.Name" Label="Role name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+        <MudTextField @bind-Value="_model.Description" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" Lines="2" Class="mb-3" />
+
+        <MudSelect T="string" Label="Permissions" MultiSelection="true" @bind-SelectedValues="_permsSel"
+                   Variant="Variant.Outlined" Margin="Margin.Dense">
+            @foreach (var p in _perms) { <MudSelectItem T="string" Value="@p">@p</MudSelectItem> }
+        </MudSelect>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save" Disabled="_saving">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string? RoleId { get; set; }
+
+    private RoleEditModel _model = new();
+    private bool _isEdit => RoleId is not null;
+    private IReadOnlyList<string> _perms = Array.Empty<string>();
+    private IEnumerable<string> _permsSel = new HashSet<string>();
+    private string? _error;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _perms = (await Admin.GetPermissionsAsync()).Where(p => p.IsActive).Select(p => p.Name).ToList();
+        if (_isEdit)
+            _model = await Admin.GetRoleAsync(RoleId!) ?? new RoleEditModel();
+        _permsSel = _model.Permissions.ToHashSet();
+    }
+
+    private async Task Save()
+    {
+        _error = null;
+        _model.Permissions = _permsSel.ToList();
+        _saving = true;
+        var res = _isEdit ? await Admin.UpdateRoleAsync(_model) : await Admin.CreateRoleAsync(_model);
+        _saving = false;
+        if (res.Succeeded) MudDialog.Close(DialogResult.Ok(true));
+        else _error = res.Error;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

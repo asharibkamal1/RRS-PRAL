@@ -41,6 +41,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
     public DbSet<Competency> Competencies => Set<Competency>();
     public DbSet<AttributeItem> Attributes => Set<AttributeItem>();
     public DbSet<DesignationAttributeMap> DesignationAttributeMaps => Set<DesignationAttributeMap>();
+    public DbSet<Permission> Permissions => Set<Permission>();
 
     // Evaluation
     public DbSet<RatorAssignment> RatorAssignments => Set<RatorAssignment>();

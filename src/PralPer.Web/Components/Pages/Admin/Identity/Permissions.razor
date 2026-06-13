@@ -1,0 +1,82 @@
+@page "/admin/permissions"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Identity
+@using PralPer.Application.Services
+@inject IIdentityAdminService Admin
+@inject ISnackbar Snackbar
+
+<PageTitle>Permissions · PRAL PER</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight:700">Permission Catalog</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Define the permissions admins can assign to roles and users.</MudText>
+    </div>
+</MudStack>
+
+<MudPaper Class="pa-4 mb-4" Elevation="0" Outlined="true">
+    <MudText Typo="Typo.subtitle2" Class="mb-2">Add permission</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="4"><MudTextField @bind-Value="_newName" Label="Name (e.g. Goals.Approve)" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+        <MudItem xs="12" sm="6"><MudTextField @bind-Value="_newDesc" Label="Description" Variant="Variant.Outlined" Margin="Margin.Dense" /></MudItem>
+        <MudItem xs="12" sm="2" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Add" OnClick="Add">Add</MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="_items" Hover="true" Dense="true" Loading="_loading">
+    <HeaderContent>
+        <MudTh>Name</MudTh>
+        <MudTh>Description</MudTh>
+        <MudTh>Active</MudTh>
+        <MudTh Style="text-align:right">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Name"><b>@context.Name</b></MudTd>
+        <MudTd DataLabel="Description">@context.Description</MudTd>
+        <MudTd DataLabel="Active">
+            <MudSwitch T="bool" Value="context.IsActive" Color="Color.Success" ValueChanged="@(v => ToggleActive(context, v))" />
+        </MudTd>
+        <MudTd Style="text-align:right">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => Delete(context))" />
+        </MudTd>
+    </RowTemplate>
+</MudTable>
+
+@code {
+    private IReadOnlyList<PermissionItem> _items = Array.Empty<PermissionItem>();
+    private bool _loading = true;
+    private string _newName = "";
+    private string? _newDesc;
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        _items = await Admin.GetPermissionsAsync();
+        _loading = false;
+    }
+
+    private async Task Add()
+    {
+        var res = await Admin.CreatePermissionAsync(new PermissionItem { Name = _newName, Description = _newDesc, IsActive = true });
+        if (res.Succeeded) { _newName = ""; _newDesc = null; Snackbar.Add("Permission added.", Severity.Success); await Load(); }
+        else Snackbar.Add(res.Error ?? "Failed.", Severity.Error);
+    }
+
+    private async Task ToggleActive(PermissionItem p, bool active)
+    {
+        var res = await Admin.UpdatePermissionAsync(new PermissionItem { Id = p.Id, Name = p.Name, Description = p.Description, IsActive = active });
+        if (res.Succeeded) await Load(); else Snackbar.Add(res.Error ?? "Failed.", Severity.Error);
+    }
+
+    private async Task Delete(PermissionItem p)
+    {
+        var res = await Admin.DeletePermissionAsync(p.Id);
+        Snackbar.Add(res.Succeeded ? "Deleted." : res.Error ?? "Failed.", res.Succeeded ? Severity.Success : Severity.Error);
+        await Load();
+    }
+}

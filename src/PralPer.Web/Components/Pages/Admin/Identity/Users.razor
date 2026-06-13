@@ -1,0 +1,127 @@
+@page "/admin/users"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@using PralPer.Application.Identity
+@using PralPer.Application.Services
+@inject IIdentityAdminService Admin
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Users · PRAL PER</PageTitle>
+
+<MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-3">
+    <div>
+        <MudText Typo="Typo.h5" Style="font-weight:700">User Management</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Create, edit, activate/deactivate and assign roles &amp; permissions.</MudText>
+    </div>
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/admin/users/bulk" StartIcon="@Icons.Material.Filled.GroupAdd">Bulk Add</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="@(() => OpenUser(null))">Add User</MudButton>
+    </MudStack>
+</MudStack>
+
+<MudTextField @bind-Value="_search" Placeholder="Search email or name…" Adornment="Adornment.Start"
+              AdornmentIcon="@Icons.Material.Filled.Search" Immediate="true" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+
+<MudTable Items="Filtered" Hover="true" Dense="true" Loading="_loading" Breakpoint="Breakpoint.Sm">
+    <HeaderContent>
+        <MudTh>Email</MudTh>
+        <MudTh>Name</MudTh>
+        <MudTh>Roles</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh Style="text-align:right">Actions</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Email">@context.Email</MudTd>
+        <MudTd DataLabel="Name">@context.DisplayName</MudTd>
+        <MudTd DataLabel="Roles">
+            @foreach (var r in context.Roles) { <MudChip T="string" Size="Size.Small" Color="Color.Primary">@r</MudChip> }
+        </MudTd>
+        <MudTd DataLabel="Status">
+            @if (context.IsActive)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error">Disabled</MudChip>
+            }
+            @if (context.MustChangePassword)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">Pending first login</MudChip>
+            }
+        </MudTd>
+        <MudTd Style="text-align:right">
+            <MudTooltip Text="Edit">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => OpenUser(context.Id))" />
+            </MudTooltip>
+            <MudTooltip Text="@(context.IsActive ? "Deactivate" : "Activate")">
+                <MudIconButton Icon="@(context.IsActive ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)"
+                               Color="@(context.IsActive ? Color.Error : Color.Success)" Size="Size.Small"
+                               OnClick="@(() => ToggleActive(context))" />
+            </MudTooltip>
+            <MudTooltip Text="Reset password to default">
+                <MudIconButton Icon="@Icons.Material.Filled.LockReset" Size="Size.Small" OnClick="@(() => ResetPassword(context))" />
+            </MudTooltip>
+            <MudTooltip Text="Delete">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
+            </MudTooltip>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent><MudText>No users found.</MudText></NoRecordsContent>
+</MudTable>
+
+@code {
+    private IReadOnlyList<UserListItem> _users = Array.Empty<UserListItem>();
+    private string _search = "";
+    private bool _loading = true;
+
+    private IEnumerable<UserListItem> Filtered => string.IsNullOrWhiteSpace(_search)
+        ? _users
+        : _users.Where(u => u.Email.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                         || u.DisplayName.Contains(_search, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        _loading = true;
+        _users = await Admin.GetUsersAsync();
+        _loading = false;
+    }
+
+    private async Task OpenUser(string? id)
+    {
+        var parameters = new DialogParameters<UserEditDialog> { { x => x.UserId, id } };
+        var dialog = await DialogService.ShowAsync<UserEditDialog>(id is null ? "Add User" : "Edit User", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled) { Snackbar.Add("User saved.", Severity.Success); await Load(); }
+    }
+
+    private async Task ToggleActive(UserListItem u)
+    {
+        var res = await Admin.SetActiveAsync(u.Id, !u.IsActive);
+        if (res.Succeeded) { Snackbar.Add(u.IsActive ? "User deactivated." : "User activated.", Severity.Success); await Load(); }
+        else Snackbar.Add(res.Error ?? "Failed.", Severity.Error);
+    }
+
+    private async Task ResetPassword(UserListItem u)
+    {
+        var ok = await DialogService.ShowMessageBox("Reset password",
+            $"Reset {u.Email} to the default password? They will go through the first-login (OTP) flow again.",
+            yesText: "Reset", cancelText: "Cancel");
+        if (ok != true) return;
+        var res = await Admin.ResetPasswordAsync(u.Id);
+        Snackbar.Add(res.Succeeded ? "Password reset to default." : res.Error ?? "Failed.", res.Succeeded ? Severity.Success : Severity.Error);
+        await Load();
+    }
+
+    private async Task DeleteUser(UserListItem u)
+    {
+        var ok = await DialogService.ShowMessageBox("Delete user", $"Permanently delete {u.Email}?", yesText: "Delete", cancelText: "Cancel");
+        if (ok != true) return;
+        var res = await Admin.DeleteUserAsync(u.Id);
+        Snackbar.Add(res.Succeeded ? "User deleted." : res.Error ?? "Failed.", res.Succeeded ? Severity.Success : Severity.Error);
+        await Load();
+    }
+}

@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<IAssignRaterService, AssignRaterService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
         services.AddScoped<IAdminPeriodService, AdminPeriodService>();
+        services.AddScoped<IIdentityAdminService, IdentityAdminService>();
 
         // Cross-cutting
         services.AddSingleton<IClock, SystemClock>();
