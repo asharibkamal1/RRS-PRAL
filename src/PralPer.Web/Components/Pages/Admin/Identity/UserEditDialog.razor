@@ -9,7 +9,8 @@
     <DialogContent>
         <MudTextField @bind-Value="_model.Email" Label="Email (login)" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
         <MudTextField @bind-Value="_model.DisplayName" Label="Display name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
-        <MudNumericField T="int?" @bind-Value="_model.EmployeeId" Label="Employee Id (optional)" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3" />
+        <MudTextField @bind-Value="_employeeIdText" Label="Employee Id (optional)" Variant="Variant.Outlined" Margin="Margin.Dense"
+                      InputMode="InputMode.numeric" Class="mb-3" />
 
         <MudSelect T="string" Label="Roles" MultiSelection="true" @bind-SelectedValues="_rolesSel"
                    Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3">
@@ -21,7 +22,10 @@
             @foreach (var p in _perms) { <MudSelectItem T="string" Value="@p">@p</MudSelectItem> }
         </MudSelect>
 
-        <MudSwitch T="bool" @bind-Value="_model.IsActive" Label="Active" Color="Color.Success" Class="mb-2" />
+        <MudSelect T="bool" @bind-Value="_model.IsActive" Label="Status" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3">
+            <MudSelectItem T="bool" Value="true">Active</MudSelectItem>
+            <MudSelectItem T="bool" Value="false">Inactive</MudSelectItem>
+        </MudSelect>
 
         @if (!_isEdit)
         {
@@ -50,6 +54,7 @@
     private IReadOnlyList<string> _perms = Array.Empty<string>();
     private IEnumerable<string> _rolesSel = new HashSet<string>();
     private IEnumerable<string> _permsSel = new HashSet<string>();
+    private string _employeeIdText = "";
     private string? _error;
     private bool _saving;
 
@@ -61,6 +66,7 @@
             _model = await Admin.GetUserAsync(UserId!) ?? new UserEditModel { IsActive = true };
         _rolesSel = _model.Roles.ToHashSet();
         _permsSel = _model.Permissions.ToHashSet();
+        _employeeIdText = _model.EmployeeId?.ToString() ?? "";
     }
 
     private async Task Save()
@@ -68,6 +74,7 @@
         _error = null;
         _model.Roles = _rolesSel.ToList();
         _model.Permissions = _permsSel.ToList();
+        _model.EmployeeId = int.TryParse(_employeeIdText, out var eid) ? eid : null;
         _saving = true;
         var res = _isEdit ? await Admin.UpdateUserAsync(_model) : await Admin.CreateUserAsync(_model);
         _saving = false;
