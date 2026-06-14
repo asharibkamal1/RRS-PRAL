@@ -5,7 +5,8 @@
     var role = CurrentUser.ActiveRole
         ?? (CurrentUser.IsInRole(RoleNames.Admin) ? RoleNames.Admin
             : CurrentUser.IsInRole(RoleNames.Manager) ? RoleNames.Manager
-            : RoleNames.Employee);
+            : CurrentUser.IsInRole(RoleNames.Employee) ? RoleNames.Employee
+            : CurrentUser.Roles.FirstOrDefault() ?? RoleNames.Employee);
 }
 
 <MudNavMenu Class="pa-2">
@@ -23,10 +24,6 @@
             <MudNavLink Href="/admin/assign-rators" Icon="@Icons.Material.Filled.People">Assign Raters</MudNavLink>
             <MudNavLink Href="/admin/per-reports" Icon="@Icons.Material.Filled.Assessment">PER Reports</MudNavLink>
             <MudNavLink Href="/admin/system-flow" Icon="@Icons.Material.Filled.AccountTree">System Flow</MudNavLink>
-            <MudText Typo="Typo.overline" Class="px-3 pt-2">Administration</MudText>
-            <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.ManageAccounts">Users</MudNavLink>
-            <MudNavLink Href="/admin/roles" Icon="@Icons.Material.Filled.AdminPanelSettings">Roles</MudNavLink>
-            <MudNavLink Href="/admin/permissions" Icon="@Icons.Material.Filled.Key">Permissions</MudNavLink>
             break;
 
         case RoleNames.Manager:
@@ -42,7 +39,7 @@
             <MudNavLink Href="/manager/system-flow" Icon="@Icons.Material.Filled.AccountTree">System Flow</MudNavLink>
             break;
 
-        default:
+        case RoleNames.Employee:
             <MudText Typo="Typo.overline" Class="px-3 pt-2">Employee</MudText>
             <MudNavLink Href="/employee/dashboard" Icon="@Icons.Material.Filled.Dashboard">Dashboard</MudNavLink>
             <MudNavLink Href="/employee/profile" Icon="@Icons.Material.Filled.Person">My Profile</MudNavLink>
@@ -51,5 +48,21 @@
             <MudNavLink Href="/employee/my-evaluations" Icon="@Icons.Material.Filled.Assessment">My Evaluations</MudNavLink>
             <MudNavLink Href="/employee/system-flow" Icon="@Icons.Material.Filled.AccountTree">System Flow</MudNavLink>
             break;
+
+        default:   // custom/admin-created roles
+            <MudText Typo="Typo.overline" Class="px-3 pt-2">@role</MudText>
+            <MudNavLink Href="/home" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
+            break;
     }
+
+    @* Administration — visible to anyone holding the permission (Admins always). *@
+    <AuthorizeView Policy="@PermissionPolicies.UsersView" Context="permUsers">
+        <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.ManageAccounts">Users</MudNavLink>
+    </AuthorizeView>
+    <AuthorizeView Policy="@PermissionPolicies.RolesView" Context="permRoles">
+        <MudNavLink Href="/admin/roles" Icon="@Icons.Material.Filled.AdminPanelSettings">Roles</MudNavLink>
+    </AuthorizeView>
+    <AuthorizeView Policy="@PermissionPolicies.PermissionsManage" Context="permPerms">
+        <MudNavLink Href="/admin/permissions" Icon="@Icons.Material.Filled.Key">Permissions</MudNavLink>
+    </AuthorizeView>
 </MudNavMenu>

@@ -10,6 +10,6 @@ public static class RoleRoutes
         RoleNames.Admin => "/admin/dashboard",
         RoleNames.Manager => "/manager/dashboard",
         RoleNames.Employee => "/employee/dashboard",
-        _ => "/"
+        _ => "/home"   // custom/admin-created roles land on a generic home
     };
 }

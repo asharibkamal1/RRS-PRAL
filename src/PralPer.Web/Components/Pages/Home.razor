@@ -1,0 +1,80 @@
+@page "/home"
+@attribute [Authorize]
+@using PralPer.Application.Identity
+@inject ICurrentUser CurrentUser
+@inject AuthenticationStateProvider AuthState
+
+<PageTitle>Home · PRAL PER</PageTitle>
+
+<MudText Typo="Typo.h5" Style="font-weight:700" Class="mb-1">Welcome, @CurrentUser.DisplayName</MudText>
+<MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">You are signed in to PRAL PER.</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Outlined="true" Elevation="0">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-2">Your roles</MudText>
+            @if (CurrentUser.Roles.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No roles assigned yet. Ask an administrator to assign one.</MudText>
+            }
+            else
+            {
+                @foreach (var r in CurrentUser.Roles)
+                {
+                    <MudChip T="string" Color="Color.Primary" Size="Size.Small">@r</MudChip>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Outlined="true" Elevation="0">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mb-2">Your permissions</MudText>
+            @if (_permissions.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">No direct or role permissions granted.</MudText>
+            }
+            else
+            {
+                @foreach (var p in _permissions)
+                {
+                    <MudChip T="string" Size="Size.Small">@p</MudChip>
+                }
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudText Typo="Typo.subtitle1" Style="font-weight:700" Class="mt-6 mb-2">Quick links</MudText>
+<MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+    @if (CurrentUser.IsInRole(RoleNames.Admin))
+    {
+        <MudButton Variant="Variant.Outlined" Href="/admin/dashboard" StartIcon="@Icons.Material.Filled.Dashboard">Admin Dashboard</MudButton>
+    }
+    @if (CurrentUser.IsInRole(RoleNames.Manager))
+    {
+        <MudButton Variant="Variant.Outlined" Href="/manager/dashboard" StartIcon="@Icons.Material.Filled.Dashboard">Manager Dashboard</MudButton>
+    }
+    @if (CurrentUser.IsInRole(RoleNames.Employee))
+    {
+        <MudButton Variant="Variant.Outlined" Href="/employee/dashboard" StartIcon="@Icons.Material.Filled.Dashboard">Employee Dashboard</MudButton>
+    }
+    <AuthorizeView Policy="@PermissionPolicies.UsersView" Context="perm">
+        <MudButton Variant="Variant.Outlined" Href="/admin/users" StartIcon="@Icons.Material.Filled.ManageAccounts">User Management</MudButton>
+    </AuthorizeView>
+</MudStack>
+
+@code {
+    private List<string> _permissions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthState.GetAuthenticationStateAsync();
+        _permissions = state.User.Claims
+            .Where(c => c.Type == AppClaims.Permission)
+            .Select(c => c.Value)
+            .Distinct()
+            .OrderBy(v => v)
+            .ToList();
+    }
+}

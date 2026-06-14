@@ -1,6 +1,6 @@
 @page "/admin/users/bulk"
 @rendermode InteractiveServer
-@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@attribute [Authorize(Policy = PermissionPolicies.UsersCreate)]
 @using System.Text
 @using Microsoft.AspNetCore.Components.Forms
 @using PralPer.Application.Identity

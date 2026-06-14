@@ -1,6 +1,6 @@
 @page "/admin/permissions"
 @rendermode InteractiveServer
-@attribute [Authorize(Policy = AuthPolicies.AdminArea)]
+@attribute [Authorize(Policy = PermissionPolicies.PermissionsManage)]
 @using PralPer.Application.Identity
 @using PralPer.Application.Services
 @inject IIdentityAdminService Admin

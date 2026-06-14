@@ -66,16 +66,16 @@
     {
         _challenge = Captcha.Generate();
 
-        // Already signed in -> go to the appropriate dashboard.
+        // Already signed in -> go to the appropriate landing (handles custom roles too).
         if (CurrentUser.IsAuthenticated)
         {
             var role = CurrentUser.ActiveRole
                 ?? (CurrentUser.IsInRole(RoleNames.Admin) ? RoleNames.Admin
                     : CurrentUser.IsInRole(RoleNames.Manager) ? RoleNames.Manager
-                    : CurrentUser.IsInRole(RoleNames.Employee) ? RoleNames.Employee : null);
+                    : CurrentUser.IsInRole(RoleNames.Employee) ? RoleNames.Employee
+                    : CurrentUser.Roles.FirstOrDefault());
 
-            if (role is not null)
-                Nav.NavigateTo(RoleRoutes.DashboardFor(role), forceLoad: true);
+            Nav.NavigateTo(role is null ? "/home" : RoleRoutes.DashboardFor(role), forceLoad: true);
         }
     }
 }
